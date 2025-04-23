@@ -38,4 +38,10 @@ class Listing extends Model
     {
         return $this->belongsTo(User::class, 'partner_id');
     }
+
+    public function reservations()
+    {
+        return $this->hasMany(Reservation::class, 'listing_id');
+    }
+
 }
