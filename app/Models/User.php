@@ -34,29 +34,7 @@ class User extends Authenticatable
         'city_id', // Assure-toi que 'city_id' est dans ta table
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
-
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'join_date' => 'datetime', // Assure-toi que la date est bien gérée
-        ];
-    }
+   
 
     // Si tu souhaites définir les relations avec les autres tables, voici des exemples :
     public function city()
@@ -68,10 +46,8 @@ class User extends Authenticatable
     {
         return $this->hasMany(Listing::class, 'partner_id');
     }
+    
 
-    public function notifications()
-    {
-        return $this->hasMany(Notification::class);
-    }
+   
 }
 
