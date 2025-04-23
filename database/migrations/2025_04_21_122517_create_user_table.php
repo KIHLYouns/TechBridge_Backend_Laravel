@@ -26,6 +26,9 @@ class CreateUserTable extends Migration
             $table->double('longitude')->nullable();
             $table->double('latitude')->nullable();
             $table->foreignId('city_id')->constrained('city')->onDelete('cascade');
+
+            $table->rememberToken();
+            $table->timestamps();
         });
     }
 
@@ -37,3 +40,4 @@ class CreateUserTable extends Migration
         Schema::dropIfExists('user');
     }
 };
+
