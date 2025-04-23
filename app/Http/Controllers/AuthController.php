@@ -17,6 +17,7 @@ class AuthController extends Controller
             'password' => 'required|string|min:6',
             'phone_number' => 'required|string',
             'address'  => 'required|string',
+            'city_id' => 'required|exists:city,id',
         ]);
 
         $user = User::create([
@@ -27,6 +28,8 @@ class AuthController extends Controller
             'address'  => $request->address,
             'role' => 'client',
             'join_date' => now(),
+            'city_id' => $request->city_id,
+
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
