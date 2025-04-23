@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -8,7 +9,7 @@ class Listing extends Model
 {
     use HasFactory;
 
-    protected $table = 'listing';
+    protected $table = 'listing'; // Si ta table s'appelle bien 'listing'
 
     protected $fillable = [
         'partner_id', 'city_id', 'title', 'description', 'price_per_day',
@@ -21,6 +22,16 @@ class Listing extends Model
     public function images()
     {
         return $this->hasMany(Image::class);
+    }
+
+    public function city()
+    {
+        return $this->belongsTo(City::class, 'city_id');
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class, 'category_id');
     }
 
     public function partner()

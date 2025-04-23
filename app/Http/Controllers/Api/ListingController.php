@@ -15,8 +15,44 @@ class ListingController extends Controller
 {
     public function index()
     {
-        $listings = Listing::all();
-        return response()->json($listings);
+        try {
+            Log::info("Début de la récupération des annonces");
+            
+            $listings = Listing::with([
+                'city:id,name',
+                'category:id,name',
+                'partner:id,username'
+            ])->get();
+            
+            Log::info("Nombre d'annonces trouvées : " . $listings->count());
+            
+            $formattedListings = $listings->map(function ($listing) {
+                try {
+                    return [
+                        'id' => $listing->id,
+                        'title' => $listing->title,
+                        'description' => $listing->description,
+                        'price_per_day' => $listing->price_per_day,
+                        'status' => $listing->status,
+                        'delivery_option' => $listing->delivery_option,
+                        'created_at' => $listing->created_at,
+                        'city_name' => $listing->city ? $listing->city->name : null,
+                        'category_name' => $listing->category ? $listing->category->name : null,
+                        'partner_username' => $listing->partner ? $listing->partner->username : null
+                    ];
+                } catch (\Exception $e) {
+                    Log::error("Erreur lors du formatage de l'annonce ID " . $listing->id . ": " . $e->getMessage());
+                    return null;
+                }
+            })->filter();
+
+            Log::info("Formatage des annonces terminé");
+            return response()->json($formattedListings);
+        } catch (\Exception $e) {
+            Log::error("Erreur lors de la récupération des annonces : " . $e->getMessage());
+            Log::error($e->getTraceAsString());
+            return response()->json(['error' => 'Erreur interne du serveur.'], 500);
+        }
     }
 
     public function store(Request $request)
