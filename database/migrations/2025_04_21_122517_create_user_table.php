@@ -14,15 +14,20 @@ class CreateUserTable extends Migration
         Schema::create('user', function (Blueprint $table) {
             $table->id();
             $table->string('username');
+            $table->string('firstname');
+            $table->string('lastname');
             $table->string('password');
             $table->string('email')->unique();
             $table->string('phone_number');
             $table->string('address');
-            $table->enum('role', ['client', 'partner', 'admin']);
+            $table->enum('role', ['USER', 'ADMIN']);
+            $table->boolean('is_partner')->default(false);
             $table->string('avatar_url')->nullable();
             $table->dateTime('join_date');
-            $table->decimal('avg_rating', 3, 2)->default(0);
-            $table->integer('review_count')->default(0);
+            $table->decimal('client_rating', 3, 2)->default(0);
+            $table->integer('client_reviews')->default(0);
+            $table->decimal('partner_rating', 3, 2)->default(0);
+            $table->integer('partner_reviews')->default(0);
             $table->double('longitude')->nullable();
             $table->double('latitude')->nullable();
             $table->foreignId('city_id')->constrained('city')->onDelete('cascade');
