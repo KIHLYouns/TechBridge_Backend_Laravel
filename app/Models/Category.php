@@ -2,17 +2,14 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-
-
-class City extends Model
+class Category extends Model
 {
     use HasFactory;
 
-    protected $table = 'city';
-
+    protected $table = 'category';
 
     protected $fillable = ['name'];
 
@@ -21,4 +18,3 @@ class City extends Model
         return $this->hasMany(Listing::class);
     }
 }
-
