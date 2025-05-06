@@ -45,5 +45,9 @@ class Listing extends Model
     {
         return $this->hasMany(Reservation::class, 'listing_id');
     }
+    public function user()
+{
+    return $this->belongsTo(User::class, 'partner_id');
+}
 
 }

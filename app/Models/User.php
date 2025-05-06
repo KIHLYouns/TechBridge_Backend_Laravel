@@ -2,15 +2,16 @@
 
 namespace App\Models;
 
+// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
+    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
-
-    // Spécifie le nom de la table (au singulier, car ta table s'appelle 'user')
+    public $timestamps = false;
     protected $table = 'user';
 
     /**
@@ -19,35 +20,62 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'username', // Assure-toi que 'username' est dans ta table
+        'username',
+        'firstname',      
+        'lastname',      
         'email',
-        'password',
         'phone_number',
         'address',
         'role',
+        'is_partner',
         'avatar_url',
         'join_date',
-        'avg_rating',
-        'review_count',
+        'client_rating',
+        'client_reviews',
+        'partner_rating',
+        'partner_reviews',
         'longitude',
         'latitude',
-        'city_id', // Assure-toi que 'city_id' est dans ta table
+        'city_id',
+    ];
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var list<string>
+     */
+    protected $hidden = [
+        'password',
     ];
 
-   
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'updated_at' => 'datetime',
+            'join_date' => 'datetime',
+            'password' => 'hashed',
+        ];
+    }
 
-    // Si tu souhaites définir les relations avec les autres tables, voici des exemples :
+
     public function city()
-    {
-        return $this->belongsTo(City::class);
-    }
-
-    public function listings()
-    {
-        return $this->hasMany(Listing::class, 'partner_id');
-    }
-    
-
-   
+{
+    return $this->belongsTo(City::class);
 }
 
+public function reviewsAsClient()
+{
+    return $this->hasMany(Review::class, 'reviewee_id')->where('type', 'forClient');
+}
+
+public function reviewsAsPartner()
+{
+    return $this->hasMany(Review::class, 'reviewee_id')->where('type', 'forPartner');
+}
+
+
+}
