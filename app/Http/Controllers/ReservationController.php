@@ -224,7 +224,8 @@ class ReservationController extends Controller
 
         // Check if the partner exists
         $partnerExists = User::where('id', $id)
-                             ->where('role', 'partner')
+                             ->where('role', 'USER')
+                             ->where('is_partner', true)
                              ->exists();
 
         if (!$partnerExists) {
