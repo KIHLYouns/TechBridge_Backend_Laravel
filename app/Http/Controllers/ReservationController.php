@@ -13,15 +13,28 @@ class ReservationController extends Controller
     public function store(Request $request): JsonResponse
     {
         try {
+            // Validate the request data
             $validated = $request->validate([
                 'start_date' => 'required|date|after_or_equal:today',
                 'end_date' => 'required|date|after:start_date',
-                'listing_id' => 'required|exists:listing,id',
-                'client_id' => 'required|exists:user,id',
+                'listing_id' => 'required|exists:listing,id', // Validate that listing_id exists in the listing table
+                'client_id' => 'required|exists:user,id', // Ensure the client exists
                 'delivery_option' => 'boolean'
             ]);
     
+            // Retrieve the listing based on listing_id
             $listing = Listing::find($validated['listing_id']);
+            
+            // Ensure listing exists before proceeding
+            if (!$listing) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Listing not found'
+                ], 404);
+            }
+    
+            // Retrieve the partner_id from the listing
+            $partner_id = $listing->partner_id;
     
             // Vérifier les réservations existantes pour ce listing
             $existingReservations = Reservation::where('listing_id', $validated['listing_id'])
@@ -44,11 +57,15 @@ class ReservationController extends Controller
                 ], 409); 
             }
     
+            // Create the reservation, including the client_id, listing_id, and partner_id
             $reservation = Reservation::create([
                 'start_date' => $validated['start_date'],
                 'end_date' => $validated['end_date'],
                 'status' => 'pending',
                 'delivery_option' => $validated['delivery_option'] ?? false,
+                'client_id' => $validated['client_id'], 
+                'listing_id' => $validated['listing_id'], 
+                'partner_id' => $partner_id, 
                 'created_at' => now()
             ]);
     
@@ -67,6 +84,7 @@ class ReservationController extends Controller
             ], 500);
         }
     }
+    
     public function index(): JsonResponse
     {
         try {
@@ -218,49 +236,50 @@ class ReservationController extends Controller
     
 
     public function getByPartner($id): JsonResponse
-{
-    try {
-        \Log::info("Fetching reservations for partner with ID: $id");
-
-        // Check if the partner exists
-        $partnerExists = User::where('id', $id)
-                             ->where('role', 'USER')
-                             ->where('is_partner', true)
-                             ->exists();
-
-        if (!$partnerExists) {
-            \Log::error("Partner not found with ID: $id");
-            return response()->json(['error' => 'Partner not found'], 404);
+    {
+        try {
+            \Log::info("Fetching reservations where partner is a client with ID: $id");
+    
+            // Check if the partner exists
+            $partnerExists = User::where('id', $id)
+                                 ->where('role', 'USER')
+                                 ->where('is_partner', true)
+                                 ->exists();
+    
+            if (!$partnerExists) {
+                \Log::error("Partner not found with ID: $id");
+                return response()->json(['error' => 'Partner not found'], 404);
+            }
+    
+            \Log::info("Partner found with ID: $id. Fetching reservations...");
+    
+            // Fetch reservations where the partner is the client (client_id = partner's ID)
+            $reservations = Reservation::with([
+                    'listing:id,title',
+                    'partner:id,username,email,phone_number,avatar_url',
+                    'client:id,username,email,phone_number,avatar_url'
+                ])
+                ->where('client_id', $id)  // Fetch reservations where partner is the client
+                ->get()
+                ->each(function ($reservation) {
+                    // Exclude the unwanted fields from the reservation model
+                    $reservation->makeHidden(['partner_id', 'client_id', 'listing_id']);
+                });
+    
+            // Log the count of reservations fetched
+            \Log::info("Number of reservations found for partner (as client) with ID $id: " . $reservations->count());
+    
+            return response()->json($reservations, 200);
+    
+        } catch (\Exception $e) {
+            // Log error details in case of failure
+            \Log::error('Error fetching reservations for partner as client with ID: ' . $id, [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['error' => 'Server error'], 500);
         }
-
-        \Log::info("Partner found with ID: $id. Fetching reservations...");
-
-        // Fetch reservations for the partner
-        $reservations = Reservation::with([
-                'listing:id,title',  
-                'partner:id,username,email,phone_number,avatar_url', 
-                'client:id,username,email,phone_number,avatar_url'  
-            ])
-            ->where('partner_id', $id)
-            ->get()
-            ->each(function ($reservation) {
-                // Exclude the unwanted fields from the reservation model
-                $reservation->makeHidden(['partner_id', 'client_id', 'listing_id']);
-            });
-
-        // Log the count of reservations fetched
-        \Log::info("Number of reservations found for partner ID $id: " . $reservations->count());
-
-        return response()->json($reservations, 200);
-
-    } catch (\Exception $e) {
-        // Log error details in case of failure
-        \Log::error('Error fetching reservations for partner ID: ' . $id, [
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-        return response()->json(['error' => 'Server error'], 500);
     }
-}
+    
 
     }
