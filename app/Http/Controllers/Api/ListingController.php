@@ -124,23 +124,7 @@ class ListingController extends Controller
 
     
 
-    public function show($id)
-    {
-        $listing = Listing::findOrFail($id);
-        return response()->json($listing);
-    }
+    
 
-    public function update(Request $request, $id)
-    {
-        $listing = Listing::findOrFail($id);
-        $listing->update($request->all());
-        return response()->json($listing);
-    }
-
-    public function destroy($id)
-    {
-        $listing = Listing::findOrFail($id);
-        $listing->delete();
-        return response()->json(null, 204);
-    }
+   
 } 
