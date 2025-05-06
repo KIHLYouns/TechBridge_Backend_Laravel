@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
@@ -33,8 +34,8 @@ class AuthController extends Controller
             'format' => 'json',
         ]); 
         
-        \Log::info("Réponse Nominatim : " . $response->body());
-        \Log::info("Statut HTTP : " . $response->status());
+        Log::info("Réponse Nominatim : " . $response->body());
+        Log::info("Statut HTTP : " . $response->status());
 
 
         if (!$response->successful()) {
@@ -51,7 +52,7 @@ class AuthController extends Controller
         $cityName = preg_replace('/[^a-zA-Z\s]/u', '', $cityName); // Ne garde que lettres latines et espaces
         $cityName = trim(explode(' ', $cityName)[0]); // Prend juste le premier mot (ex : "Rabat" de "Rabat ⵔⴱⴰⵟ الرباط")
 
-        \Log::info("Nom de ville nettoyé : " . $cityName);
+        Log::info("Nom de ville nettoyé : " . $cityName);
 
         if (!$cityName) {
             return response()->json(['error' => 'Ville non trouvée à partir de la position'], 400);
