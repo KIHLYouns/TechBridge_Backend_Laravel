@@ -1,4 +1,11 @@
 <?php
+
+
+use App\Http\Controllers\AuthController;
+
+
+
+
 use App\Http\Controllers\Api\ListingController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\CityController;
@@ -41,3 +48,6 @@ Route::prefix('users')->group(function() {
 Route::get('/test', function () {
     return ['message' => 'API OK'];
 });
+//Route de feature/login-logout-api
+Route::post('/auth/signup', [AuthController::class, 'register']);
+Route::post('/auth/login', [AuthController::class, 'login']);

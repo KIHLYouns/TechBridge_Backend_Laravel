@@ -16,6 +16,7 @@ class CreateReservationTable extends Migration
             $table->id();
             $table->dateTime('start_date');
             $table->dateTime('end_date');
+            $table->decimal('total_cost', 8, 2);
             $table->enum('status', ['pending', 'confirmed', 'ongoing', 'canceled', 'completed']);
             $table->string('contract_url');
             $table->dateTime('created_at');
