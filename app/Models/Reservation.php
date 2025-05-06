@@ -28,4 +28,20 @@ class Reservation extends Model
         'start_date' => 'datetime',
         'end_date' => 'datetime'
     ];
+
+    public function listing()
+{
+    return $this->belongsTo(Listing::class);
+}
+
+public function client()
+{
+    return $this->belongsTo(User::class, 'client_id');
+}
+
+public function partner()
+{
+    return $this->belongsTo(User::class, 'partner_id');
+}
+
 }

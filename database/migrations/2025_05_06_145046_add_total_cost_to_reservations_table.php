@@ -10,7 +10,7 @@ class AddTotalCostToReservationsTable extends Migration
 {
     public function up()
     {
-        Schema::table('reservations', function (Blueprint $table) {
+        Schema::table('reservation', function (Blueprint $table) {
             $table->decimal('total_cost', 8, 2)->nullable();
         });
     }

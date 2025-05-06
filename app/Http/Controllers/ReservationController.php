@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Reservation;
 use App\Models\Listing;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -47,9 +48,6 @@ class ReservationController extends Controller
                 'start_date' => $validated['start_date'],
                 'end_date' => $validated['end_date'],
                 'status' => 'pending',
-                'client_id' => $validated['client_id'],
-                'listing_id' => $validated['listing_id'],
-                'partner_id' => $listing->partner_id,
                 'delivery_option' => $validated['delivery_option'] ?? false,
                 'created_at' => now()
             ]);
@@ -177,41 +175,91 @@ class ReservationController extends Controller
             ], 500);
         }
     }
-public function getByClient($id): JsonResponse
+    public function getByClient($id): JsonResponse
+    {
+        try {
+            $client = User::find($id);
+    
+            if (!$client) {
+                \Log::error("Client not found with ID: $id");
+                return response()->json(['error' => 'Client not found'], 404);
+            }
+    
+            // Fetch reservations related to the client
+            $reservations = Reservation::with([
+                    'listing:id,title', 
+                    'partner:id,username,email,phone_number,avatar_url', 
+                    'client:id,username,email,phone_number,avatar_url'
+                ])
+                ->where('client_id', $id)
+                ->get()
+                ->each(function ($reservation) {
+                    $reservation->makeHidden(['client_id', 'partner_id', 'listing_id']);
+                });
+    
+            if ($reservations->isEmpty()) {
+                return response()->json(['message' => 'No reservations found for this client'], 404);
+            }
+    
+            return response()->json($reservations, 200);
+    
+        } catch (\Exception $e) {
+            \Log::error('Error fetching reservations for client ID: ' . $id, [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'error' => 'Server error',
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500);
+        }
+    }
+    
+
+    public function getByPartner($id): JsonResponse
 {
     try {
-        $reservations = Reservation::where('client_id', $id)->get();
+        \Log::info("Fetching reservations for partner with ID: $id");
 
-        return response()->json([
-            'success' => true,
-            'message' => count($reservations) . ' reservations found for client',
-            'data' => $reservations
-        ]);
+        // Check if the partner exists
+        $partnerExists = User::where('id', $id)
+                             ->where('role', 'partner')
+                             ->exists();
+
+        if (!$partnerExists) {
+            \Log::error("Partner not found with ID: $id");
+            return response()->json(['error' => 'Partner not found'], 404);
+        }
+
+        \Log::info("Partner found with ID: $id. Fetching reservations...");
+
+        // Fetch reservations for the partner
+        $reservations = Reservation::with([
+                'listing:id,title',  
+                'partner:id,username,email,phone_number,avatar_url', 
+                'client:id,username,email,phone_number,avatar_url'  
+            ])
+            ->where('partner_id', $id)
+            ->get()
+            ->each(function ($reservation) {
+                // Exclude the unwanted fields from the reservation model
+                $reservation->makeHidden(['partner_id', 'client_id', 'listing_id']);
+            });
+
+        // Log the count of reservations fetched
+        \Log::info("Number of reservations found for partner ID $id: " . $reservations->count());
+
+        return response()->json($reservations, 200);
+
     } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to get reservations for client',
-            'error' => $e->getMessage()
-        ], 500);
+        // Log error details in case of failure
+        \Log::error('Error fetching reservations for partner ID: ' . $id, [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        return response()->json(['error' => 'Server error'], 500);
     }
 }
 
-public function getByPartner($id): JsonResponse
-{
-    try {
-        $reservations = Reservation::where('partner_id', $id)->get();
-
-        return response()->json([
-            'success' => true,
-            'message' => count($reservations) . ' reservations found for partner',
-            'data' => $reservations
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to get reservations for partner',
-            'error' => $e->getMessage()
-        ], 500);
     }
-}
-}

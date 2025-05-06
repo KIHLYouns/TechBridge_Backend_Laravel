@@ -10,17 +10,17 @@ class UpdateUsersTable extends Migration
     {
         Schema::table('user', function (Blueprint $table) {
             // Ajout de nouvelles colonnes
-            $table->string('firstname')->nullable()->after('username');
-            $table->string('lastname')->nullable()->after('firstname');
-            $table->boolean('is_partner')->default(false)->after('role');
-            $table->decimal('client_rating', 3, 2)->nullable()->after('join_date');
-            $table->integer('client_reviews')->default(0)->after('client_rating');
-            $table->decimal('partner_rating', 3, 2)->nullable()->after('client_reviews');
+            //$table->string('firstname')->nullable()->after('username');
+            //$table->string('lastname')->nullable()->after('firstname');
+            //$table->boolean('is_partner')->default(false)->after('role');
+            //$table->decimal('client_rating', 3, 2)->nullable()->after('join_date');
+            //$table->integer('client_reviews')->default(0)->after('client_rating');
+            //$table->decimal('partner_rating', 3, 2)->nullable()->after('client_reviews');
             // Ajout de la colonne partner_reviews
-            $table->integer('partner_reviews')->default(0)->after('partner_rating');
+            //$table->integer('partner_reviews')->default(0)->after('partner_rating');
 
             // Modification de l'enum 'role'
-            $table->enum('role', ['admin', 'user'])->default('user')->change();
+            //$table->enum('role', ['admin', 'user'])->default('user')->change();
 
             // Suppression de la colonne avg_rating
             $table->dropColumn('avg_rating');
