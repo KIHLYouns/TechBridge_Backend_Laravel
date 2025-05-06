@@ -21,19 +21,23 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'username',
+        'firstname',      
+        'lastname',      
         'email',
-        'password',
         'phone_number',
         'address',
         'role',
+        'is_partner',
         'avatar_url',
-        'avg_rating',
-        'review_count',
+        'join_date',
+        'client_rating',
+        'client_reviews',
+        'partner_rating',
+        'partner_reviews',
         'longitude',
         'latitude',
-        'city_id'
+        'city_id',
     ];
-
     /**
      * The attributes that should be hidden for serialization.
      *
@@ -56,4 +60,22 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+
+    public function city()
+{
+    return $this->belongsTo(City::class);
+}
+
+public function reviewsAsClient()
+{
+    return $this->hasMany(Review::class, 'reviewee_id')->where('type', 'forClient');
+}
+
+public function reviewsAsPartner()
+{
+    return $this->hasMany(Review::class, 'reviewee_id')->where('type', 'forPartner');
+}
+
+
 }

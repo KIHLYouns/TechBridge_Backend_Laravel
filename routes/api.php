@@ -5,10 +5,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 
 // ✅ Routes API SANS auth pour tester facilement
-Route::prefix('user')->group(function() {
-    Route::get('/{id}', [UserController::class, 'show']);
-    Route::put('/{id}', [UserController::class, 'updateById']);
-    Route::post('/', [UserController::class, 'store']);
+Route::prefix('users')->group(function() {
+    Route::get('/{id}/profile', [UserController::class, 'show']);
+    Route::patch('/{id}/profile', [UserController::class, 'updateById']);
 });
 
 // Test route
