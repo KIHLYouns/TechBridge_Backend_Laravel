@@ -1,42 +1,31 @@
 <?php
+
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Reservation extends Model
 {
-    use HasFactory;
 
-    protected $table = 'reservation'; // Laravel attend "reservations" par défaut
+    public $timestamps = false;
+    
+    protected $table = 'reservation';
 
     protected $fillable = [
         'start_date',
         'end_date',
         'status',
         'contract_url',
+        'created_at',
         'delivery_option',
         'client_id',
         'partner_id',
-        'listing_id',
-        'created_at',
+        'listing_id'
     ];
-
-    public $timestamps = false; // si tu n’as pas de updated_at et created_at gérés automatiquement
-
-    // Relations
-    public function listing()
-    {
-        return $this->belongsTo(Listing::class, 'listing_id');
-    }
-
-    public function partner()
-    {
-        return $this->belongsTo(User::class, 'partner_id');
-    }
-
-    public function client()
-    {
-        return $this->belongsTo(User::class, 'client_id');
-    }
+    
+    protected $casts = [
+        'created_at' => 'datetime',
+        'start_date' => 'datetime',
+        'end_date' => 'datetime'
+    ];
 }
