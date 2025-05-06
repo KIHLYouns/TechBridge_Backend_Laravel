@@ -16,11 +16,32 @@ class ReservationController extends Controller
                 'start_date' => 'required|date|after_or_equal:today',
                 'end_date' => 'required|date|after:start_date',
                 'listing_id' => 'required|exists:listing,id',
-                'client_id' => 'required|exists:user,id', 
+                'client_id' => 'required|exists:user,id',
                 'delivery_option' => 'boolean'
             ]);
     
             $listing = Listing::find($validated['listing_id']);
+    
+            // Vérifier les réservations existantes pour ce listing
+            $existingReservations = Reservation::where('listing_id', $validated['listing_id'])
+                ->where(function($query) use ($validated) {
+                    $query->whereBetween('start_date', [$validated['start_date'], $validated['end_date']])
+                          ->orWhereBetween('end_date', [$validated['start_date'], $validated['end_date']])
+                          ->orWhere(function($q) use ($validated) {
+                              $q->where('start_date', '<', $validated['start_date'])
+                                ->where('end_date', '>', $validated['end_date']);
+                          });
+                })
+                ->whereIn('status', ['pending', 'confirmed', 'ongoing'])
+                ->exists();
+    
+            if ($existingReservations) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cet objet est déjà réservé pour la période demandée',
+                    'available' => false
+                ], 409); 
+            }
     
             $reservation = Reservation::create([
                 'start_date' => $validated['start_date'],
@@ -35,14 +56,15 @@ class ReservationController extends Controller
     
             return response()->json([
                 'success' => true,
-                'message' => 'Reservation created successfully',
-                'data' => $reservation
+                'message' => 'Réservation créée avec succès',
+                'data' => $reservation,
+                'available' => true
             ], 201);
     
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create reservation',
+                'message' => 'Échec de la création de la réservation',
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -94,7 +116,6 @@ class ReservationController extends Controller
         }
     }
 
-    // Update reservation
     public function update(Request $request, $id): JsonResponse
     {
         try {
@@ -129,7 +150,6 @@ class ReservationController extends Controller
         }
     }
 
-    // Delete reservation
     public function destroy($id): JsonResponse
     {
         try {
@@ -157,4 +177,41 @@ class ReservationController extends Controller
             ], 500);
         }
     }
+public function getByClient($id): JsonResponse
+{
+    try {
+        $reservations = Reservation::where('client_id', $id)->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => count($reservations) . ' reservations found for client',
+            'data' => $reservations
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to get reservations for client',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
+public function getByPartner($id): JsonResponse
+{
+    try {
+        $reservations = Reservation::where('partner_id', $id)->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => count($reservations) . ' reservations found for partner',
+            'data' => $reservations
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to get reservations for partner',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
 }
