@@ -13,30 +13,28 @@ class ReservationController extends Controller
     public function store(Request $request): JsonResponse
     {
         try {
-            // Validate the request data
             $validated = $request->validate([
                 'start_date' => 'required|date|after_or_equal:today',
                 'end_date' => 'required|date|after:start_date',
-                'listing_id' => 'required|exists:listing,id', // Validate that listing_id exists in the listing table
-                'client_id' => 'required|exists:user,id', // Ensure the client exists
+                'listing_id' => 'required|exists:listing,id',
+                'client_id' => 'required|exists:user,id',
                 'delivery_option' => 'boolean'
             ]);
     
-            // Retrieve the listing based on listing_id
             $listing = Listing::find($validated['listing_id']);
-            
-            // Ensure listing exists before proceeding
+    
             if (!$listing) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Listing not found'
+                    'message' => 'Listing not found.',
+                    'available' => false
                 ], 404);
             }
     
-            // Retrieve the partner_id from the listing
-            $partner_id = $listing->partner_id;
+            // Log the requested start and end dates
+            \Log::info("Requested dates: Start - {$validated['start_date']}, End - {$validated['end_date']}");
     
-            // Vérifier les réservations existantes pour ce listing
+            // Check for overlapping reservations with specific statuses
             $existingReservations = Reservation::where('listing_id', $validated['listing_id'])
                 ->where(function($query) use ($validated) {
                     $query->whereBetween('start_date', [$validated['start_date'], $validated['end_date']])
@@ -46,8 +44,15 @@ class ReservationController extends Controller
                                 ->where('end_date', '>', $validated['end_date']);
                           });
                 })
-                ->whereIn('status', ['pending', 'confirmed', 'ongoing'])
-                ->exists();
+                ->whereIn('status', ['pending', 'confirmed', 'ongoing']);
+    
+            // Log the query being executed
+            \Log::info("Executing SQL Query: " . $existingReservations->toSql());
+    
+            // Check if there are any existing reservations that overlap
+            $existingReservations = $existingReservations->exists();
+    
+            \Log::info("Existing reservations found: " . ($existingReservations ? 'Yes' : 'No'));
     
             if ($existingReservations) {
                 return response()->json([
@@ -56,8 +61,7 @@ class ReservationController extends Controller
                     'available' => false
                 ], 409); 
             }
-    
-            // Create the reservation, including the client_id, listing_id, and partner_id
+
             $reservation = Reservation::create([
                 'start_date' => $validated['start_date'],
                 'end_date' => $validated['end_date'],
@@ -65,7 +69,7 @@ class ReservationController extends Controller
                 'delivery_option' => $validated['delivery_option'] ?? false,
                 'client_id' => $validated['client_id'], 
                 'listing_id' => $validated['listing_id'], 
-                'partner_id' => $partner_id, 
+                'partner_id' => $listing->partner_id, 
                 'created_at' => now()
             ]);
     
@@ -84,7 +88,7 @@ class ReservationController extends Controller
             ], 500);
         }
     }
-    
+
     public function index(): JsonResponse
     {
         try {
