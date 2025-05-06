@@ -20,9 +20,11 @@ class Listing extends Model
     public $timestamps = false;
 
     public function images()
-    {
-        return $this->hasMany(Image::class);
-    }
+{
+    return $this->hasMany(Image::class, 'listing_id');
+
+}
+
 
     public function city()
     {
@@ -38,4 +40,8 @@ class Listing extends Model
     {
         return $this->belongsTo(User::class, 'partner_id');
     }
+    public function user()
+{
+    return $this->belongsTo(User::class, 'partner_id');
+}
 }
