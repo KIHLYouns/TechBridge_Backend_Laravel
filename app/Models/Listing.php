@@ -9,7 +9,7 @@ class Listing extends Model
 {
     use HasFactory;
 
-    protected $table = 'listing'; // Si ta table s'appelle bien 'listing'
+    protected $table = 'listing'; 
 
     protected $fillable = [
         'partner_id', 'city_id', 'title', 'description', 'price_per_day',
@@ -48,6 +48,11 @@ class Listing extends Model
     public function user()
 {
     return $this->belongsTo(User::class, 'partner_id');
+}
+
+public function availabilities()
+{
+    return $this->hasMany(Availability::class);
 }
 
 }

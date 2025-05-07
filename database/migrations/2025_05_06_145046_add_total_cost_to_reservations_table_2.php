@@ -6,11 +6,11 @@ use Illuminate\Support\Facades\Schema;
 
 
 
-class AddTotalCostToReservationsTable extends Migration
+class AddTotalCostToReservationsTable2 extends Migration
 {
     public function up()
     {
-        Schema::table('reservation', function (Blueprint $table) {
+        Schema::table('reservations', function (Blueprint $table) {
             $table->decimal('total_cost', 8, 2)->nullable();
         });
     }

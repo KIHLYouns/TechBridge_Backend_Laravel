@@ -4,20 +4,19 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class UpdateUsersTable extends Migration
+class UpdateUsersTable2 extends Migration
 {
     public function up()
     {
         Schema::table('user', function (Blueprint $table) {
             // Ajout de nouvelles colonnes
-            $table->string('firstname')->nullable()->after('username');
-            $table->string('lastname')->nullable()->after('firstname');
-            $table->boolean('is_partner')->default(false)->after('role');
-            $table->decimal('client_rating', 3, 2)->nullable()->after('join_date');
-            $table->integer('client_reviews')->default(0)->after('client_rating');
-            $table->decimal('partner_rating', 3, 2)->nullable()->after('client_reviews');
-            // Ajout de la colonne partner_reviews
-            $table->integer('partner_reviews')->default(0)->after('partner_rating');
+            $table->string('firstname')->nullable();
+            $table->string('lastname')->nullable();
+            $table->boolean('is_partner')->default(false);
+            $table->decimal('client_rating', 3, 2)->nullable();
+            $table->integer('client_reviews')->default(0);
+            $table->decimal('partner_rating', 3, 2)->nullable();
+            $table->integer('partner_reviews')->default(0);
 
             // Modification de l'enum 'role'
             $table->enum('role', ['admin', 'user'])->default('user')->change();
@@ -49,4 +48,3 @@ class UpdateUsersTable extends Migration
         });
     }
 }
-
