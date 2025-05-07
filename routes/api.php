@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\ReservationController;
 
 Route::prefix('listings')->group(function () {
-    Route::get('/filter', [ListingController::class, 'filter']); //http://127.0.0.1:8000/api/listings/filter?city_id=1&category_id=1
+    // Route::get(uri: '/filter', [ListingController::class, 'filter']); //http://127.0.0.1:8000/api/listings/filter?city_id=1&category_id=1
     Route::get('/', [ListingController::class, 'index']);
     Route::post('/', [ListingController::class, 'store']);
     Route::get('/{id}', [ListingController::class, 'show']);
