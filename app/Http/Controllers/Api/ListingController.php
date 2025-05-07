@@ -17,39 +17,65 @@ class ListingController extends Controller
     public function index()
     {
         try {
-            Log::info("Début de la récupération des annonces");
+            Log::info('Début de la récupération des annonces.');
     
-            $listings = Listing::with([
-                'city:id,name',
-                'partner:id,username',
-                'category:id,name',
-                'images:id,listing_id,url'
-            ])->get();
+            $listings = Listing::with(['partner', 'city', 'images'])->get();
+            Log::info('Annonces récupérées avec succès.', ['count' => $listings->count()]);
     
-            $formattedListings = $listings->map(function ($listing) {
-                return [
-                    'id' => $listing->id,
-                    'title' => $listing->title,
-                    'price_per_day' => $listing->price_per_day,
-                    'status' => $listing->status,
-                    'avg_rating' => $listing->avg_rating,
-                    'review_count' => $listing->review_count,
-                    'is_premium' => $listing->is_premium,
-                    'delivery_option' => $listing->delivery_option,
-                    'city_name' => $listing->city?->name,
-                    'category_name' => $listing->category?->name,
-                    'partner_username' => $listing->partner?->username,
-                    'image_url' => $listing->images->first() ? asset($listing->images->first()->url) : null
-                ];
-            });
+            $result = $listings->map(function ($listing) {
+                try {
+                    Log::info('Traitement d\'une annonce.', ['listing_id' => $listing->id]);
     
-            return response()->json($formattedListings);
+                    $firstImage = $listing->images->first();
+                    $mainImageUrl = $firstImage ? $firstImage->url : null;
+                    Log::info('Image principale récupérée.', ['main_image' => $mainImageUrl]);
+    
+                    $partner = $listing->partner;
+                    $city = $listing->city;
+    
+                    return [
+                        'id'             => $listing->id,
+                        'title'          => $listing->title,
+                        'price_per_day'  => $listing->price_per_day,
+                        'is_premium'     => $listing->is_premium,
+                        'main_image'     => $mainImageUrl,
+                        'partner'        => $partner ? [
+                            'id'             => $partner->id,
+                            'username'       => $partner->username,
+                            'avatar_url'     => $partner->avatar_url,
+                            'partner_rating' => $partner->partner_rating,
+                            'partner_reviews'=> $partner->partner_reviews,
+                            'coordinates'    => [
+                                'latitude'    => $partner->latitude,
+                                'longitude'   => $partner->longitude,
+                            ],
+                        ] : null,
+                        'city'           => $city ? [
+                            'id'   => $city->id,
+                            'name' => $city->name,
+                        ] : null,
+                    ];
+                } catch (\Exception $e) {
+                    Log::error('Erreur lors du traitement d\'une annonce.', [
+                        'listing_id' => $listing->id ?? null,
+                        'message' => $e->getMessage()
+                    ]);
+                    return null;
+                }
+            })->filter(); 
+    
+            Log::info('Toutes les annonces ont été traitées avec succès.');
+    
+            return response()->json($result, 200);
         } catch (\Exception $e) {
-            Log::error("Erreur lors de la récupération des annonces : " . $e->getMessage());
-            return response()->json(['error' => 'Erreur serveur'], 500);
+            Log::error('Erreur lors de la récupération des annonces :', ['message' => $e->getMessage()]);
+            return response()->json([
+                'error' => 'Erreur lors de la récupération des annonces'
+            ], 500);
         }
     }
     
+
 
     public function store(Request $request)
     {
