@@ -31,17 +31,12 @@ Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{id}', [CategoryController::class, 'show']);
 
 
-
 // ✅ Routes API SANS auth pour tester facilement
 Route::prefix('users')->group(function() {
     Route::get('/{id}/profile', [UserController::class, 'show']);
     Route::patch('/{id}/profile', [UserController::class, 'updateById']);
 });
 
-// Test route
-Route::get('/test', function () {
-    return ['message' => 'API OK'];
-});
 //Route de feature/login-logout-api
 Route::post('/auth/signup', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login']);
