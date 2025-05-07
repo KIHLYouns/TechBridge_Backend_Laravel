@@ -41,7 +41,7 @@ class ListingController extends Controller
           }
   
           if ($request->filled('equipment_rating')) {
-              $query->where('avg_rating', '>=', $request->equipment_rating);
+              $query->where('equipment_rating', '>=', $request->equipment_rating);
           }
   
           if ($request->filled('partner_rating')) {
@@ -70,6 +70,7 @@ class ListingController extends Controller
                       'price_per_day'  => $listing->price_per_day,
                       'is_premium'     => $listing->is_premium,
                       'category_id'=>$listing->category_id,
+                      'equipment_rating' => $listing->equipment_rating,
                       'main_image'     => $mainImageUrl,
                       'partner'        => $partner ? [
                           'id'             => $partner->id,
@@ -218,6 +219,7 @@ class ListingController extends Controller
             'price_per_day' => $listing->price_per_day,
             'status' => $listing->status,
             'is_premium' => $listing->is_premium,
+            'equipment_rating' => $listing->equipment_rating,
             'premium_start_date' => $listing->premium_start_date,
             'premium_end_date' => $listing->premium_end_date,
             'created_at' => $listing->created_at,
