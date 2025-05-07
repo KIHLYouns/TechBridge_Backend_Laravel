@@ -106,5 +106,30 @@ class UserController extends Controller
     }
 }
 
+
+public function enablePartner($id)
+{
+    try {
+        $user = User::findOrFail($id);
+
+        // Mise à jour
+        $user->is_partner = true;
+        $user->save();
+
+        return response()->json(true, 200); 
+    } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'User not found',
+        ], 404);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to enable partner mode',
+            'error' => $e->getMessage(),
+        ], 500);
+    }
+}
+
     
 }
