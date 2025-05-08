@@ -38,6 +38,7 @@ class ListingController extends Controller
                         'title'          => $listing->title,
                         'price_per_day'  => $listing->price_per_day,
                         'is_premium'     => $listing->is_premium,
+                        'equipment_rating' => $listing->equipment_rating,
                         'main_image'     => $mainImageUrl,
                         'partner'        => $partner ? [
                             'id'             => $partner->id,
@@ -183,6 +184,7 @@ class ListingController extends Controller
             'description' => $listing->description,
             'price_per_day' => $listing->price_per_day,
             'status' => $listing->status,
+            'equipment_rating' => $listing->equipment_rating,
             'is_premium' => $listing->is_premium,
             'premium_start_date' => $listing->premium_start_date,
             'premium_end_date' => $listing->premium_end_date,
