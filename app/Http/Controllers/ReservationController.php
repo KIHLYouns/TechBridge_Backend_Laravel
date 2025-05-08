@@ -237,53 +237,152 @@ class ReservationController extends Controller
             ], 500);
         }
     }
-    
-
     public function getByPartner($id): JsonResponse
     {
         try {
-            \Log::info("Fetching reservations where partner is a client with ID: $id");
-    
-            // Check if the partner exists
+
             $partnerExists = User::where('id', $id)
                                  ->where('role', 'USER')
                                  ->where('is_partner', true)
                                  ->exists();
     
             if (!$partnerExists) {
-                \Log::error("Partner not found with ID: $id");
                 return response()->json(['error' => 'Partner not found'], 404);
             }
     
-            \Log::info("Partner found with ID: $id. Fetching reservations...");
+            \Log::info("Partner exists. Fetching reservations for listings owned by partner ID: $id");
     
-            // Fetch reservations where the partner is the client (client_id = partner's ID)
+            // Fetch reservations made on listings owned by the partner
             $reservations = Reservation::with([
                     'listing:id,title',
                     'partner:id,username,email,phone_number,avatar_url',
                     'client:id,username,email,phone_number,avatar_url'
                 ])
-                ->where('client_id', $id)  // Fetch reservations where partner is the client
+                ->whereHas('listing', function ($query) use ($id) {
+                    $query->where('partner_id', $id); // Listings owned by partner
+                })
                 ->get()
                 ->each(function ($reservation) {
-                    // Exclude the unwanted fields from the reservation model
                     $reservation->makeHidden(['partner_id', 'client_id', 'listing_id']);
                 });
     
-            // Log the count of reservations fetched
-            \Log::info("Number of reservations found for partner (as client) with ID $id: " . $reservations->count());
+            \Log::info("Number of reservations found on partner's listings: " . $reservations->count());
     
             return response()->json($reservations, 200);
     
         } catch (\Exception $e) {
-            // Log error details in case of failure
-            \Log::error('Error fetching reservations for partner as client with ID: ' . $id, [
+            \Log::error('Error fetching reservations for listings by partner ID: ' . $id, [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
             return response()->json(['error' => 'Server error'], 500);
         }
     }
-    
 
+    public function cancelReservation($id): JsonResponse
+{
+    try {
+        // Find the reservation
+        $reservation = Reservation::find($id);
+
+        if (!$reservation) {
+            \Log::warning("Reservation not found with ID: $id");
+            return response()->json(['error' => 'Reservation not found'], 404);
+        }
+
+        // Update the status to 'canceled'
+        $reservation->status = 'canceled';
+        $reservation->save();
+
+        \Log::info("Reservation with ID $id was successfully canceled.");
+
+        return response()->json([
+            'message' => 'Reservation canceled successfully.',
+            'reservation' => $reservation
+        ], 200);
+
+    } catch (\Exception $e) {
+        \Log::error("Error canceling reservation with ID $id", [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json(['error' => 'Server error'], 500);
+    }
+}
+public function acceptReservation($id): JsonResponse
+{
+    try {
+        $reservation = Reservation::find($id);
+
+        if (!$reservation) {
+            \Log::warning("Reservation not found with ID: $id");
+            return response()->json(['error' => 'Reservation not found'], 404);
+        }
+
+        if ($reservation->status === 'canceled') {
+            \Log::warning("Attempted to confirm a canceled reservation with ID: $id");
+            return response()->json(['error' => 'Cannot confirm a canceled reservation.'], 400);
+        }
+
+        // Update the status to 'confirmed'
+        $reservation->status = 'confirmed';
+        $reservation->save();
+
+        \Log::info("Reservation with ID $id was successfully confirmed.");
+
+        return response()->json([
+            'message' => 'Reservation confirmed successfully.',
+            'reservation' => $reservation
+        ], 200);
+
+    } catch (\Exception $e) {
+        \Log::error("Error confirming reservation with ID $id", [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json(['error' => 'Server error'], 500);
+    }
+}
+public function declineReservation($id): JsonResponse
+{
+    try {
+        $reservation = Reservation::find($id);
+
+        if (!$reservation) {
+            \Log::warning("Reservation not found with ID: $id");
+            return response()->json(['error' => 'Reservation not found'], 404);
+        }
+
+        // Prevent declining if already canceled, confirmed, or completed
+        if (in_array($reservation->status, ['canceled', 'confirmed', 'completed'])) {
+            \Log::warning("Cannot decline reservation with ID $id. Current status: {$reservation->status}");
+            return response()->json([
+                'error' => 'This reservation cannot be declined because it is already ' . $reservation->status . '.'
+            ], 400);
+        }
+
+        $reservation->status = 'declined';
+        $reservation->save();
+
+        \Log::info("Reservation with ID $id was declined.");
+
+        return response()->json([
+            'message' => 'Reservation declined successfully.',
+            'reservation' => $reservation
+        ], 200);
+
+    } catch (\Exception $e) {
+        \Log::error("Error declining reservation with ID $id", [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json(['error' => 'Server error'], 500);
+    }
+}
+
+
+    
     }

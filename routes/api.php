@@ -52,4 +52,7 @@ Route::get('/user', function (Request $request) {
 
 Route::get('/reservations/client/{id}', [ReservationController::class, 'getByClient']);
 Route::get('/reservations/partner/{id}', [ReservationController::class, 'getByPartner']);
+Route::put('/reservations/{id}/cancel', [ReservationController::class, 'cancelReservation']);
+Route::put('/reservations/{id}/confirm', [ReservationController::class, 'acceptReservation']);
+Route::put('/reservations/{id}/decline', [ReservationController::class, 'declineReservation']);
 Route::apiResource('reservations', ReservationController::class);
