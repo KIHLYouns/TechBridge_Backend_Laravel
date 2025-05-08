@@ -24,6 +24,7 @@ Class   CreateListingTable  extends Migration
             $table->dateTime('premium_end_date')->nullable();
             $table->dateTime('created_at');
             $table->boolean('delivery_option')->default(false);
+            $table->decimal('equipment_rating', 8, 2);
             $table->foreignId('category_id')->constrained('category')->onDelete('cascade');
         });
     }

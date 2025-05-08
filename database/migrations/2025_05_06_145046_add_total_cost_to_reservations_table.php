@@ -8,17 +8,7 @@ use Illuminate\Support\Facades\Schema;
 
 class AddTotalCostToReservationsTable extends Migration
 {
-    public function up()
-    {
-        Schema::table('reservation', function (Blueprint $table) {
-            $table->decimal('total_cost', 8, 2)->nullable();
-        });
-    }
+    
 
-    public function down()
-    {
-        Schema::table('reservations', function (Blueprint $table) {
-            $table->dropColumn('total_cost');
-        });
-    }
+    
 }

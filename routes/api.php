@@ -1,7 +1,7 @@
 <?php
 
 
-use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ListingController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\CityController;
@@ -10,6 +10,10 @@ use App\Http\Controllers\Api\ImageController;
 use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
 use App\Http\Controllers\ReservationController;
+use App\Http\Controllers\Api\UserReviewsController;
+use App\Http\Controllers\Api\ReviewController;
+use App\Http\Controllers\Api\ReviewCheckController;
+
 
 Route::prefix('listings')->group(function () {
     Route::get('/filter', [ListingController::class, 'filter']); //http://127.0.0.1:8000/api/listings/filter?city_id=1&category_id=1
@@ -48,3 +52,12 @@ Route::get('/user', function (Request $request) {
 Route::get('/reservations/client/{id}', [ReservationController::class, 'getByClient']);
 Route::get('/reservations/partner/{id}', [ReservationController::class, 'getByPartner']);
 Route::apiResource('reservations', ReservationController::class);
+
+// User review routes
+Route::get('/users/{id}/reviews', [UserReviewsController::class, 'getUserReviews']);
+
+// Review submission route
+Route::post('/reviews', [ReviewController::class, 'store']);
+
+// Reviews routes
+Route::get('/reviews/check', [ReviewCheckController::class, 'checkReview']);
