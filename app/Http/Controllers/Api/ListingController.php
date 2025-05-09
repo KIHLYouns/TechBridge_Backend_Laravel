@@ -14,52 +14,53 @@ use App\Models\Availability;
 class ListingController extends Controller
 
 {
-    public function index(Request $request)
+  public function index(Request $request)
 {
     try {
         Log::info('Début de la récupération des annonces avec filtres optionnels.');
 
-         $query = Listing::with(['partner', 'city', 'images']);
+        // Démarre la requête pour récupérer les annonces avec les relations nécessaires
+        $query = Listing::with(['partner', 'city', 'images'])
+                        ->where('status', 'active'); // Filtrer uniquement les annonces actives
 
-          $query = Listing::with(['partner', 'city', 'images']);
-  
-          // Appliquer les filtres dynamiques
-          if ($request->filled('category_id')) {
-              $query->where('category_id', $request->category_id);
-          }
-  
-          if ($request->filled('city_id')) {
-              $query->where('city_id', $request->city_id);
-          }
-  
-          if ($request->filled('min_price')) {
-              $query->where('price_per_day', '>=', $request->minPrice);
-          }
-  
-          if ($request->filled('max_price')) {
-              $query->where('price_per_day', '<=', $request->maxPrice);
-          }
-  
-          if ($request->filled('equipment_rating')) {
-              $query->where('equipment_rating', '>=', $request->equipment_rating);
-          }
-  
-          if ($request->filled('partner_rating')) {
-              $query->whereHas('partner', function ($q) use ($request) {
-                  $q->where('partner_rating', '>=', $request->partner_rating);
-              });
-          }
+        // Appliquer les filtres dynamiques
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+            Log::info("Filtrage par category_id : " . $request->category_id);
+        }
 
+        if ($request->filled('city_id')) {
+            $query->where('city_id', $request->city_id);
+            Log::info("Filtrage par city_id : " . $request->city_id);
+        }
 
+        if ($request->filled('min_price')) {
+            $query->where('price_per_day', '>=', $request->min_price);
+            Log::info("Filtrage par min_price : " . $request->min_price);
+        }
 
-          $listings = $query->get();
-        // Filtrer uniquement les annonces actives
-        $listings = Listing::with(['partner', 'city', 'images'])
-            ->where('status', 'active')
-            ->get();
+        if ($request->filled('max_price')) {
+            $query->where('price_per_day', '<=', $request->max_price);
+            Log::info("Filtrage par max_price : " . $request->max_price);
+        }
 
-        Log::info('Annonces actives récupérées avec succès.', ['count' => $listings->count()]);
+        if ($request->filled('equipment_rating')) {
+            $query->where('equipment_rating', '>=', $request->equipment_rating);
+            Log::info("Filtrage par equipment_rating : " . $request->equipment_rating);
+        }
 
+        if ($request->filled('partner_rating')) {
+            $query->whereHas('partner', function ($q) use ($request) {
+                $q->where('partner_rating', '>=', $request->partner_rating);
+            });
+            Log::info("Filtrage par partner_rating : " . $request->partner_rating);
+        }
+
+        // Exécute la requête
+        $listings = $query->get();
+        Log::info('Annonces récupérées avec succès.', ['count' => $listings->count()]);
+
+        // Formatage des résultats
         $result = $listings->map(function ($listing) {
             try {
                 Log::info('Traitement d\'une annonce.', ['listing_id' => $listing->id]);
@@ -89,10 +90,10 @@ class ListingController extends Controller
                             'latitude'    => $partner->latitude,
                             'longitude'   => $partner->longitude,
                         ],
-                        'city' => $city ? [
-                            'id'   => $city->id,
-                            'name' => $city->name,
-                        ] : null,
+                    ] : null,
+                    'city'           => $city ? [
+                        'id'   => $city->id,
+                        'name' => $city->name,
                     ] : null,
                 ];
             } catch (\Exception $e) {
@@ -107,6 +108,7 @@ class ListingController extends Controller
         Log::info('Toutes les annonces actives ont été traitées avec succès.');
 
         return response()->json($result, 200);
+
     } catch (\Exception $e) {
         Log::error('Erreur lors de la récupération des annonces :', ['message' => $e->getMessage()]);
         return response()->json([
