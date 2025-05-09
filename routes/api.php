@@ -14,7 +14,6 @@ use App\Http\Controllers\ReservationController;
 
 
 Route::middleware('auth:sanctum')->prefix('listings')->group(function () {
-    Route::get('/filter', [ListingController::class, 'filter']); 
     Route::get('/', [ListingController::class, 'index']);
     Route::post('/', [ListingController::class, 'store']);
     Route::get('/{id}', [ListingController::class, 'show']);

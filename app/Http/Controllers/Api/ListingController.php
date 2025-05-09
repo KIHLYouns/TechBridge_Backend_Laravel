@@ -14,11 +14,45 @@ use App\Models\Availability;
 class ListingController extends Controller
 
 {
-    public function index()
+    public function index(Request $request)
 {
     try {
-        Log::info('Début de la récupération des annonces.');
+        Log::info('Début de la récupération des annonces avec filtres optionnels.');
 
+         $query = Listing::with(['partner', 'city', 'images']);
+
+          $query = Listing::with(['partner', 'city', 'images']);
+  
+          // Appliquer les filtres dynamiques
+          if ($request->filled('category_id')) {
+              $query->where('category_id', $request->category_id);
+          }
+  
+          if ($request->filled('city_id')) {
+              $query->where('city_id', $request->city_id);
+          }
+  
+          if ($request->filled('min_price')) {
+              $query->where('price_per_day', '>=', $request->minPrice);
+          }
+  
+          if ($request->filled('max_price')) {
+              $query->where('price_per_day', '<=', $request->maxPrice);
+          }
+  
+          if ($request->filled('equipment_rating')) {
+              $query->where('equipment_rating', '>=', $request->equipment_rating);
+          }
+  
+          if ($request->filled('partner_rating')) {
+              $query->whereHas('partner', function ($q) use ($request) {
+                  $q->where('partner_rating', '>=', $request->partner_rating);
+              });
+          }
+
+
+
+          $listings = $query->get();
         // Filtrer uniquement les annonces actives
         $listings = Listing::with(['partner', 'city', 'images'])
             ->where('status', 'active')
