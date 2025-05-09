@@ -6,6 +6,8 @@ use App\Models\Reservation;
 use App\Models\Listing;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
+use App\Models\User;
 
 class ReservationController extends Controller
 {
@@ -22,7 +24,18 @@ class ReservationController extends Controller
     
             $listing = Listing::find($validated['listing_id']);
     
-            // Vérifier les réservations existantes pour ce listing
+            if (!$listing) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Listing not found.',
+                    'available' => false
+                ], 404);
+            }
+    
+            // Log the requested start and end dates
+            Log::info("Requested dates: Start - {$validated['start_date']}, End - {$validated['end_date']}");
+    
+            // Check for overlapping reservations with specific statuses
             $existingReservations = Reservation::where('listing_id', $validated['listing_id'])
                 ->where(function($query) use ($validated) {
                     $query->whereBetween('start_date', [$validated['start_date'], $validated['end_date']])
@@ -32,8 +45,15 @@ class ReservationController extends Controller
                                 ->where('end_date', '>', $validated['end_date']);
                           });
                 })
-                ->whereIn('status', ['pending', 'confirmed', 'ongoing'])
-                ->exists();
+                ->whereIn('status', ['pending', 'confirmed', 'ongoing']);
+    
+            // Log the query being executed
+            Log::info("Executing SQL Query: " . $existingReservations->toSql());
+    
+            // Check if there are any existing reservations that overlap
+            $existingReservations = $existingReservations->exists();
+    
+            Log::info("Existing reservations found: " . ($existingReservations ? 'Yes' : 'No'));
     
             if ($existingReservations) {
                 return response()->json([
@@ -42,7 +62,7 @@ class ReservationController extends Controller
                     'available' => false
                 ], 409); 
             }
-    
+
             $reservation = Reservation::create([
                 'start_date' => $validated['start_date'],
                 'end_date' => $validated['end_date'],
@@ -51,6 +71,9 @@ class ReservationController extends Controller
                 'listing_id' => $validated['listing_id'],
                 'partner_id' => $listing->partner_id,
                 'delivery_option' => $validated['delivery_option'] ?? false,
+                'client_id' => $validated['client_id'], 
+                'listing_id' => $validated['listing_id'], 
+                'partner_id' => $listing->partner_id, 
                 'created_at' => now()
             ]);
     
@@ -69,6 +92,7 @@ class ReservationController extends Controller
             ], 500);
         }
     }
+
     public function index(): JsonResponse
     {
         try {
@@ -177,41 +201,192 @@ class ReservationController extends Controller
             ], 500);
         }
     }
-public function getByClient($id): JsonResponse
+    public function getByClient($id): JsonResponse
+    {
+        try {
+            $client = User::find($id);
+    
+            if (!$client) {
+                Log::error("Client not found with ID: $id");
+                return response()->json(['error' => 'Client not found'], 404);
+            }
+    
+            // Fetch reservations related to the client
+            $reservations = Reservation::with([
+                    'listing:id,title', 
+                    'partner:id,username,email,phone_number,avatar_url', 
+                    'client:id,username,email,phone_number,avatar_url'
+                ])
+                ->where('client_id', $id)
+                ->get()
+                ->each(function ($reservation) {
+                    $reservation->makeHidden(['client_id', 'partner_id', 'listing_id']);
+                });
+    
+            if ($reservations->isEmpty()) {
+                return response()->json(['message' => 'No reservations found for this client'], 404);
+            }
+    
+            return response()->json($reservations, 200);
+    
+        } catch (\Exception $e) {
+            Log::error('Error fetching reservations for client ID: ' . $id, [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'error' => 'Server error',
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500);
+        }
+    }
+    public function getByPartner($id): JsonResponse
+    {
+        try {
+
+            $partnerExists = User::where('id', $id)
+                                 ->where('role', 'USER')
+                                 ->where('is_partner', true)
+                                 ->exists();
+    
+            if (!$partnerExists) {
+                return response()->json(['error' => 'Partner not found'], 404);
+            }
+    
+            Log::info("Partner exists. Fetching reservations for listings owned by partner ID: $id");
+    
+            // Fetch reservations made on listings owned by the partner
+            $reservations = Reservation::with([
+                    'listing:id,title',
+                    'partner:id,username,email,phone_number,avatar_url',
+                    'client:id,username,email,phone_number,avatar_url'
+                ])
+                ->whereHas('listing', function ($query) use ($id) {
+                    $query->where('partner_id', $id); // Listings owned by partner
+                })
+                ->get()
+                ->each(function ($reservation) {
+                    $reservation->makeHidden(['partner_id', 'client_id', 'listing_id']);
+                });
+    
+            Log::info("Number of reservations found on partner's listings: " . $reservations->count());
+    
+            return response()->json($reservations, 200);
+    
+        } catch (\Exception $e) {
+            Log::error('Error fetching reservations for listings by partner ID: ' . $id, [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['error' => 'Server error'], 500);
+        }
+    }
+
+    public function cancelReservation($id): JsonResponse
 {
     try {
-        $reservations = Reservation::where('client_id', $id)->get();
+        // Find the reservation
+        $reservation = Reservation::find($id);
+
+        if (!$reservation) {
+            Log::warning("Reservation not found with ID: $id");
+            return response()->json(['error' => 'Reservation not found'], 404);
+        }
+
+        // Update the status to 'canceled'
+        $reservation->status = 'canceled';
+        $reservation->save();
+
+        Log::info("Reservation with ID $id was successfully canceled.");
 
         return response()->json([
-            'success' => true,
-            'message' => count($reservations) . ' reservations found for client',
-            'data' => $reservations
-        ]);
+            'message' => 'Reservation canceled successfully.',
+            'reservation' => $reservation
+        ], 200);
+
     } catch (\Exception $e) {
+        Log::error("Error canceling reservation with ID $id", [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json(['error' => 'Server error'], 500);
+    }
+}
+public function acceptReservation($id): JsonResponse
+{
+    try {
+        $reservation = Reservation::find($id);
+
+        if (!$reservation) {
+            Log::warning("Reservation not found with ID: $id");
+            return response()->json(['error' => 'Reservation not found'], 404);
+        }
+
+        if ($reservation->status === 'canceled') {
+            Log::warning("Attempted to confirm a canceled reservation with ID: $id");
+            return response()->json(['error' => 'Cannot confirm a canceled reservation.'], 400);
+        }
+
+        // Update the status to 'confirmed'
+        $reservation->status = 'confirmed';
+        $reservation->save();
+
+        Log::info("Reservation with ID $id was successfully confirmed.");
+
         return response()->json([
-            'success' => false,
-            'message' => 'Failed to get reservations for client',
-            'error' => $e->getMessage()
-        ], 500);
+            'message' => 'Reservation confirmed successfully.',
+            'reservation' => $reservation
+        ], 200);
+
+    } catch (\Exception $e) {
+        Log::error("Error confirming reservation with ID $id", [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json(['error' => 'Server error'], 500);
+    }
+}
+public function declineReservation($id): JsonResponse
+{
+    try {
+        $reservation = Reservation::find($id);
+
+        if (!$reservation) {
+            Log::warning("Reservation not found with ID: $id");
+            return response()->json(['error' => 'Reservation not found'], 404);
+        }
+
+        // Prevent declining if already canceled, confirmed, or completed
+        if (in_array($reservation->status, ['canceled', 'confirmed', 'completed'])) {
+            Log::warning("Cannot decline reservation with ID $id. Current status: {$reservation->status}");
+            return response()->json([
+                'error' => 'This reservation cannot be declined because it is already ' . $reservation->status . '.'
+            ], 400);
+        }
+
+        $reservation->status = 'declined';
+        $reservation->save();
+
+        Log::info("Reservation with ID $id was declined.");
+
+        return response()->json([
+            'message' => 'Reservation declined successfully.',
+            'reservation' => $reservation
+        ], 200);
+
+    } catch (\Exception $e) {
+        Log::error("Error declining reservation with ID $id", [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json(['error' => 'Server error'], 500);
     }
 }
 
-public function getByPartner($id): JsonResponse
-{
-    try {
-        $reservations = Reservation::where('partner_id', $id)->get();
 
-        return response()->json([
-            'success' => true,
-            'message' => count($reservations) . ' reservations found for partner',
-            'data' => $reservations
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to get reservations for partner',
-            'error' => $e->getMessage()
-        ], 500);
+    
     }
-}
-}

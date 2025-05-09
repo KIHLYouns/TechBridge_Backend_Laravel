@@ -8,12 +8,7 @@ use Illuminate\Support\Facades\Schema;
 
 class RemoveReviewCountFromUsersTable extends Migration
 {
-    public function up()
-    {
-        Schema::table('user', function (Blueprint $table) {
-            $table->dropColumn('review_count');
-        });
-    }
+   
 
     public function down()
     {
