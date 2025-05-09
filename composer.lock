@@ -1494,7 +1494,6 @@
                 "type": "zip",
                 "url": "https://api.github.com/repos/laravel/sanctum/zipball/a360a6a1fd2400ead4eb9b6a9c1bb272939194f5",
                 "reference": "a360a6a1fd2400ead4eb9b6a9c1bb272939194f5",
-
                 "shasum": ""
             },
             "require": {
