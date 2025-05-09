@@ -11,6 +11,7 @@ use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
 use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\Api\UserReviewsController;
+use App\Http\Controllers\Api\ClientReviewsController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\ReviewCheckController;
 
@@ -54,10 +55,13 @@ Route::get('/reservations/partner/{id}', [ReservationController::class, 'getByPa
 Route::apiResource('reservations', ReservationController::class);
 
 // User review routes
-Route::get('/users/{id}/reviews', [UserReviewsController::class, 'getUserReviews']);
+//partner
+Route::middleware('auth:sanctum')->get('/users/{id}/reviews', [UserReviewsController::class, 'getUserReviews']);
+//Client
+Route::middleware('auth:sanctum')->get('/reviews/clients/{clientId}', [ClientReviewsController::class, 'getClientReviews']);
 
 // Review submission route
-Route::post('/reviews', [ReviewController::class, 'store']);
+Route::middleware('auth:sanctum')->post('/reviews', [ReviewController::class, 'store']);
 
 // Reviews routes
-Route::get('/reviews/check', [ReviewCheckController::class, 'checkReview']);
+Route::middleware('auth:sanctum')->get('/reviews/check', [ReviewCheckController::class, 'checkReview']);

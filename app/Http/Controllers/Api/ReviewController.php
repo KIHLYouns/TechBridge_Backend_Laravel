@@ -12,6 +12,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\ReviewSubmittedMail;
 
 class ReviewController extends Controller
 {
@@ -120,7 +122,12 @@ class ReviewController extends Controller
             }
             
             $review->save();
-            
+            $reviewee = User::find($request->reviewee_id);
+
+            if ($reviewee && filter_var($reviewee->email, FILTER_VALIDATE_EMAIL)) {
+                Mail::to($reviewee->email)->send(new ReviewSubmittedMail($review));
+            }
+
             // Update ratings based on the review type
             $this->updateRatings($review);
             
