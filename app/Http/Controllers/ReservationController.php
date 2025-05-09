@@ -4,9 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Reservation;
 use App\Models\Listing;
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
+use App\Models\User;
 
 class ReservationController extends Controller
 {
@@ -32,7 +33,7 @@ class ReservationController extends Controller
             }
     
             // Log the requested start and end dates
-            \Log::info("Requested dates: Start - {$validated['start_date']}, End - {$validated['end_date']}");
+            Log::info("Requested dates: Start - {$validated['start_date']}, End - {$validated['end_date']}");
     
             // Check for overlapping reservations with specific statuses
             $existingReservations = Reservation::where('listing_id', $validated['listing_id'])
@@ -47,12 +48,12 @@ class ReservationController extends Controller
                 ->whereIn('status', ['pending', 'confirmed', 'ongoing']);
     
             // Log the query being executed
-            \Log::info("Executing SQL Query: " . $existingReservations->toSql());
+            Log::info("Executing SQL Query: " . $existingReservations->toSql());
     
             // Check if there are any existing reservations that overlap
             $existingReservations = $existingReservations->exists();
     
-            \Log::info("Existing reservations found: " . ($existingReservations ? 'Yes' : 'No'));
+            Log::info("Existing reservations found: " . ($existingReservations ? 'Yes' : 'No'));
     
             if ($existingReservations) {
                 return response()->json([
@@ -66,6 +67,9 @@ class ReservationController extends Controller
                 'start_date' => $validated['start_date'],
                 'end_date' => $validated['end_date'],
                 'status' => 'pending',
+                'client_id' => $validated['client_id'],
+                'listing_id' => $validated['listing_id'],
+                'partner_id' => $listing->partner_id,
                 'delivery_option' => $validated['delivery_option'] ?? false,
                 'client_id' => $validated['client_id'], 
                 'listing_id' => $validated['listing_id'], 
@@ -203,7 +207,7 @@ class ReservationController extends Controller
             $client = User::find($id);
     
             if (!$client) {
-                \Log::error("Client not found with ID: $id");
+                Log::error("Client not found with ID: $id");
                 return response()->json(['error' => 'Client not found'], 404);
             }
     
@@ -226,7 +230,7 @@ class ReservationController extends Controller
             return response()->json($reservations, 200);
     
         } catch (\Exception $e) {
-            \Log::error('Error fetching reservations for client ID: ' . $id, [
+            Log::error('Error fetching reservations for client ID: ' . $id, [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -250,7 +254,7 @@ class ReservationController extends Controller
                 return response()->json(['error' => 'Partner not found'], 404);
             }
     
-            \Log::info("Partner exists. Fetching reservations for listings owned by partner ID: $id");
+            Log::info("Partner exists. Fetching reservations for listings owned by partner ID: $id");
     
             // Fetch reservations made on listings owned by the partner
             $reservations = Reservation::with([
@@ -266,12 +270,12 @@ class ReservationController extends Controller
                     $reservation->makeHidden(['partner_id', 'client_id', 'listing_id']);
                 });
     
-            \Log::info("Number of reservations found on partner's listings: " . $reservations->count());
+            Log::info("Number of reservations found on partner's listings: " . $reservations->count());
     
             return response()->json($reservations, 200);
     
         } catch (\Exception $e) {
-            \Log::error('Error fetching reservations for listings by partner ID: ' . $id, [
+            Log::error('Error fetching reservations for listings by partner ID: ' . $id, [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -286,7 +290,7 @@ class ReservationController extends Controller
         $reservation = Reservation::find($id);
 
         if (!$reservation) {
-            \Log::warning("Reservation not found with ID: $id");
+            Log::warning("Reservation not found with ID: $id");
             return response()->json(['error' => 'Reservation not found'], 404);
         }
 
@@ -294,7 +298,7 @@ class ReservationController extends Controller
         $reservation->status = 'canceled';
         $reservation->save();
 
-        \Log::info("Reservation with ID $id was successfully canceled.");
+        Log::info("Reservation with ID $id was successfully canceled.");
 
         return response()->json([
             'message' => 'Reservation canceled successfully.',
@@ -302,7 +306,7 @@ class ReservationController extends Controller
         ], 200);
 
     } catch (\Exception $e) {
-        \Log::error("Error canceling reservation with ID $id", [
+        Log::error("Error canceling reservation with ID $id", [
             'error' => $e->getMessage(),
             'trace' => $e->getTraceAsString()
         ]);
@@ -316,12 +320,12 @@ public function acceptReservation($id): JsonResponse
         $reservation = Reservation::find($id);
 
         if (!$reservation) {
-            \Log::warning("Reservation not found with ID: $id");
+            Log::warning("Reservation not found with ID: $id");
             return response()->json(['error' => 'Reservation not found'], 404);
         }
 
         if ($reservation->status === 'canceled') {
-            \Log::warning("Attempted to confirm a canceled reservation with ID: $id");
+            Log::warning("Attempted to confirm a canceled reservation with ID: $id");
             return response()->json(['error' => 'Cannot confirm a canceled reservation.'], 400);
         }
 
@@ -329,7 +333,7 @@ public function acceptReservation($id): JsonResponse
         $reservation->status = 'confirmed';
         $reservation->save();
 
-        \Log::info("Reservation with ID $id was successfully confirmed.");
+        Log::info("Reservation with ID $id was successfully confirmed.");
 
         return response()->json([
             'message' => 'Reservation confirmed successfully.',
@@ -337,7 +341,7 @@ public function acceptReservation($id): JsonResponse
         ], 200);
 
     } catch (\Exception $e) {
-        \Log::error("Error confirming reservation with ID $id", [
+        Log::error("Error confirming reservation with ID $id", [
             'error' => $e->getMessage(),
             'trace' => $e->getTraceAsString()
         ]);
@@ -351,13 +355,13 @@ public function declineReservation($id): JsonResponse
         $reservation = Reservation::find($id);
 
         if (!$reservation) {
-            \Log::warning("Reservation not found with ID: $id");
+            Log::warning("Reservation not found with ID: $id");
             return response()->json(['error' => 'Reservation not found'], 404);
         }
 
         // Prevent declining if already canceled, confirmed, or completed
         if (in_array($reservation->status, ['canceled', 'confirmed', 'completed'])) {
-            \Log::warning("Cannot decline reservation with ID $id. Current status: {$reservation->status}");
+            Log::warning("Cannot decline reservation with ID $id. Current status: {$reservation->status}");
             return response()->json([
                 'error' => 'This reservation cannot be declined because it is already ' . $reservation->status . '.'
             ], 400);
@@ -366,7 +370,7 @@ public function declineReservation($id): JsonResponse
         $reservation->status = 'declined';
         $reservation->save();
 
-        \Log::info("Reservation with ID $id was declined.");
+        Log::info("Reservation with ID $id was declined.");
 
         return response()->json([
             'message' => 'Reservation declined successfully.',
@@ -374,7 +378,7 @@ public function declineReservation($id): JsonResponse
         ], 200);
 
     } catch (\Exception $e) {
-        \Log::error("Error declining reservation with ID $id", [
+        Log::error("Error declining reservation with ID $id", [
             'error' => $e->getMessage(),
             'trace' => $e->getTraceAsString()
         ]);

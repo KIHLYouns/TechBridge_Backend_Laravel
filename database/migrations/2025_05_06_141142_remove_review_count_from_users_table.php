@@ -4,6 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
+
+
 class RemoveReviewCountFromUsersTable extends Migration
 {
    
@@ -15,4 +17,3 @@ class RemoveReviewCountFromUsersTable extends Migration
         });
     }
 }
-
