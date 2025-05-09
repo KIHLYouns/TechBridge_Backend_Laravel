@@ -24,7 +24,6 @@ Route::prefix('listings')->group(function () {
     Route::put('/{id}', [ListingController::class, 'update']);
     Route::delete('/{id}', [ListingController::class, 'destroy']);
 
-
 });
 
 // Routes des villes
@@ -40,6 +39,8 @@ Route::get('/categories/{id}', [CategoryController::class, 'show']);
 Route::prefix('users')->group(function() {
     Route::get('/{id}/profile', [UserController::class, 'show']);
     Route::patch('/{id}/profile', [UserController::class, 'updateById']);
+    Route::post('/{id}/partner/enable', [UserController::class, 'enablePartner']);
+
 });
 
 //Route de feature/login-logout-api
