@@ -19,9 +19,8 @@ class ListingController extends Controller
     try {
         Log::info('Début de la récupération des annonces avec filtres optionnels.');
 
-        // Démarre la requête pour récupérer les annonces avec les relations nécessaires
         $query = Listing::with(['partner', 'city', 'images'])
-                        ->where('status', 'active'); // Filtrer uniquement les annonces actives
+                        ->where('status', 'active'); 
 
         // Appliquer les filtres dynamiques
         if ($request->filled('category_id')) {

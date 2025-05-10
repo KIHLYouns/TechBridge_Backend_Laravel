@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Mail;
 use App\Mail\ClientInfoMail;
 use App\Mail\PartnerInfoMail;
 use App\Mail\ReservationCanceledMail;
+use App\Http\Controllers\Api\ListingController;
 
 class ReservationController extends Controller
 {
@@ -194,41 +195,45 @@ class ReservationController extends Controller
         }
     }
     public function getByClient($id): JsonResponse
-    {
-        try {
-            $client = User::find($id);
+{
+    try {
+        $client = User::find($id);
     
-            if (!$client) {
-                \Log::error("Client not found with ID: $id");
-                return response()->json(['error' => 'Client not found'], 404);
-            }
-    
-            // Fetch reservations related to the client
-            $reservations = Reservation::with([
-                    'listing:id,title', 
-                    'partner:id,username,email,phone_number,avatar_url', 
-                    'client:id,username,email,phone_number,avatar_url'
-                ])
-                ->where('client_id', $id)
-                ->get()
-                ->each(function ($reservation) {
-                    $reservation->makeHidden(['client_id', 'partner_id', 'listing_id']);
-                });
-    
-            if ($reservations->isEmpty()) {
-                return response()->json(['message' => 'No reservations found for this client'], 404);
-            }
-    
-            return response()->json($reservations, 200);
-    
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Server error',
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ], 500);
+        if (!$client) {
+            \Log::error("Client not found with ID: $id");
+            return response()->json(['error' => 'Client not found'], 404);
         }
+    
+        // Fetch reservations
+        $reservations = Reservation::with(['listing', 'partner', 'client'])
+            ->where('client_id', $id)
+            ->get();
+
+        $listingController = new ListingController();
+        $enhancedReservations = $reservations->map(function ($reservation) use ($listingController) {
+            $listingDetails = $listingController->show($reservation->listing_id);
+            $listingData = json_decode($listingDetails->getContent(), true);
+            
+            return [
+                'reservation_id' => $reservation->id,
+                'start_date' => $reservation->start_date,
+                'end_date' => $reservation->end_date,
+                'status' => $reservation->status,
+                'listing' => $listingData,
+                'partner' => $reservation->partner,
+                'client' => $reservation->client
+            ];
+        });
+    
+        return response()->json($enhancedReservations, 200);
+    
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => 'Server error',
+            'message' => $e->getMessage()
+        ], 500);
     }
+}
     public function getByPartner($id): JsonResponse
     {
         try {
