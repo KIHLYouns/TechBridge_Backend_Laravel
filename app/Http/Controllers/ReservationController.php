@@ -278,6 +278,26 @@ class ReservationController extends Controller
                 return response()->json(['error' => 'Reservation not found'], 404);
             }
     
+            // Check if reservation is already ongoing or completed
+            if ($reservation->status === 'ongoing') {
+                return response()->json([
+                    'error' => 'Reservation cannot be canceled because it is already ongoing.'
+                ], 400);
+            }
+    
+            if ($reservation->status === 'completed') {
+                return response()->json([
+                    'error' => 'Reservation cannot be canceled because it is already completed.'
+                ], 400);
+            }
+    
+            // Check if reservation is already canceled
+            if ($reservation->status === 'canceled') {
+                return response()->json([
+                    'error' => 'Reservation is already canceled.'
+                ], 400);
+            }
+    
             $reservation->status = 'canceled';
             $reservation->save();
     
@@ -291,10 +311,12 @@ class ReservationController extends Controller
                 'reservation' => $reservation
             ], 200);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Server error'], 500);
+            return response()->json([
+                'error' => 'Server error',
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
-    
 
 public function acceptReservation($id): JsonResponse
 {
@@ -356,7 +378,7 @@ public function declineReservation($id): JsonResponse
         if (!$reservation) {
             return response()->json(['error' => 'Reservation not found'], 404);
         }
-        if (in_array($reservation->status, ['canceled', 'confirmed', 'completed'])) {
+        if (in_array($reservation->status, ['canceled', 'ongoing'])) {
             return response()->json([
                 'error' => 'This reservation cannot be declined because it is already ' . $reservation->status . '.'
             ], 400);
