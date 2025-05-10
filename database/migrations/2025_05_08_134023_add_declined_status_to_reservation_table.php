@@ -13,7 +13,6 @@ class AddDeclinedStatusToReservationTable extends Migration
 
     public function down(): void
     {
-        // Revert to the old ENUM values if needed
         DB::statement("ALTER TABLE reservation MODIFY status ENUM('pending', 'confirmed', 'ongoing', 'canceled', 'completed')");
     }
 }
