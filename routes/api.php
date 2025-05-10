@@ -16,16 +16,18 @@ use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\ReviewCheckController;
 
 
+
 Route::prefix('listings')->group(function () {
-    Route::get('/filter', [ListingController::class, 'filter']); //http://127.0.0.1:8000/api/listings/filter?city_id=1&category_id=1
+    Route::get('/filter', [ListingController::class, 'filter']); 
     Route::get('/', [ListingController::class, 'index']);
     Route::post('/', [ListingController::class, 'store']);
     Route::get('/{id}', [ListingController::class, 'show']);
     Route::put('/{id}', [ListingController::class, 'update']);
-    Route::delete('/{id}', [ListingController::class, 'destroy']);
-
-
+    Route::patch('/{id}/toggle-status', [ListingController::class, 'toggleStatus']);
+    Route::patch('/{id}/toggle-archived', [ListingController::class, 'toggleArchivedStatus']);
+    Route::get('/partner/{partnerId}', [ListingController::class, 'getListingsByPartner']);
 });
+
 
 // Routes des villes
 Route::get('/cities', [CityController::class, 'index']);
