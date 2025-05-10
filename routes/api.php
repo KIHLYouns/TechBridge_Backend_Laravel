@@ -18,7 +18,6 @@ use App\Http\Controllers\Api\ReviewCheckController;
 
 
 Route::prefix('listings')->group(function () {
-    Route::get('/filter', [ListingController::class, 'filter']); 
     Route::get('/', [ListingController::class, 'index']);
     Route::post('/', [ListingController::class, 'store']);
     Route::get('/{id}', [ListingController::class, 'show']);
