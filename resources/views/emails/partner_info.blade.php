@@ -1,16 +1,16 @@
-@component('mail::message')
-# Partner Information
 
-Hello,
+<p>Hello,
 
-Your reservation has been confirmed. Here are the details of the partner:
+Your reservation has been confirmed. Here are the details of the partner:<br>
 
-- **Name:** {{ $partner->name }}
-- **Email:** {{ $partner->email }}
-- **Phone:** {{ $partner->phone ?? 'N/A' }}
+- <strong>Username:</strong> {{ $partner->username }}<br>
+- <strong>Name:</strong> {{ $partner->firstname }} {{ $partner->lastname }}<br>
+- <strong>Email:</strong> {{ $partner->email }}<br>
+- <strong>Phone:</strong>  {{ $partner->phone_number ?? 'N/A' }}<br>
+- <strong>Address:</strong>  {{ $partner->address}}<br>
 
 Thank you for choosing us.
 
 Regards,  
-{{ config('app.name') }}
-@endcomponent
+{{ config('app.name') }}<p>
+
