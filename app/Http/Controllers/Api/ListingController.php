@@ -19,6 +19,7 @@ class ListingController extends Controller
     try {
         Log::info('Début de la récupération des annonces.');
 
+
         // Filtrer uniquement les annonces actives
         $listings = Listing::with(['partner', 'city', 'images'])
             ->where('status', 'active')
