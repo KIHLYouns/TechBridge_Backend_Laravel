@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\UserReviewsController;
 use App\Http\Controllers\Api\ClientReviewsController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\ReviewCheckController;
+use App\Http\Controllers\Api\ListingReviewsController;
 
 
 
@@ -68,4 +69,4 @@ Route::post('/reviews', [ReviewController::class, 'store']);
 Route::middleware('auth:sanctum')->get('/reviews/check', [ReviewCheckController::class, 'checkReview']);
 
 // Reviews Listing
-Route::get('/listings/{listing}/reviews', [\App\Http\Controllers\Api\ListingReviewsController::class, 'getReviews']);
+Route::get('/listings/{listing}/reviews', [ListingReviewsController::class, 'getReviews']);
