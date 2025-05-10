@@ -17,8 +17,8 @@ class AuthController extends Controller
     {
         $request->validate([
             'username'      => 'required|string|max:255',
-            'firstname' => 'required|string',
-            'lastname' => 'required|string',
+            'firstname'     => 'required|string',
+            'lastname'      => 'required|string',
             'email'         => 'required|string|email|unique:user,email',
             'password'      => 'required|string|min:6',
             'phone_number'  => 'required|string',
@@ -38,7 +38,6 @@ class AuthController extends Controller
         Log::info("Réponse Nominatim : " . $response->body());
         Log::info("Statut HTTP : " . $response->status());
 
-
         if (!$response->successful()) {
             return response()->json(['error' => 'Échec de récupération de la ville'], 500);
         }
@@ -50,8 +49,8 @@ class AuthController extends Controller
             return response()->json(['error' => 'Ville non trouvée à partir de la position'], 400);
         }
 
-        $cityName = preg_replace('/[^a-zA-Z\s]/u', '', $cityName); // Ne garde que lettres latines et espaces
-        $cityName = trim(explode(' ', $cityName)[0]); // Prend juste le premier mot (ex : "Rabat" de "Rabat ⵔⴱⴰⵟ الرباط")
+        $cityName = preg_replace('/[^a-zA-Z\s]/u', '', $cityName);
+        $cityName = trim(explode(' ', $cityName)[0]);
 
         Log::info("Nom de ville nettoyé : " . $cityName);
 
@@ -67,8 +66,8 @@ class AuthController extends Controller
 
         $user = User::create([
             'username'     => $request->username,
-            'firstname' => $request->firstname,
-            'lastname' => $request->lastname,
+            'firstname'    => $request->firstname,
+            'lastname'     => $request->lastname,
             'email'        => $request->email,
             'password'     => Hash::make($request->password),
             'phone_number' => $request->phone_number,
@@ -81,7 +80,7 @@ class AuthController extends Controller
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'user'  => $user,
+            'id'    => $user->id,
             'token' => $token,
         ], 201);
     }
@@ -104,11 +103,8 @@ class AuthController extends Controller
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'message'      => 'Connexion réussie',
-            'user'         => $user,
-            'access_token' => $token,
-            'token_type'   => 'Bearer',
+            'id'    => $user->id,
+            'token' => $token,
         ]);
     }
 }
-
