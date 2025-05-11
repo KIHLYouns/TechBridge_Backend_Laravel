@@ -129,7 +129,6 @@ Log::info("Données reçues (hors fichiers) :", $request->except('images'));
     // Validation des données
     $validated = $request->validate([
         'partner_id' => 'required|exists:user,id',
-        'city_id' => 'required|exists:city,id',
         'title' => 'required|string|max:255',
         'description' => 'required|string',
         'price_per_day' => 'required|numeric',
@@ -166,7 +165,6 @@ Log::info("Données reçues (hors fichiers) :", $request->except('images'));
     // Données pour créer l'annonce
     $listingData = [
         'partner_id' => $validated['partner_id'],
-        'city_id' => $validated['city_id'],
         'title' => $validated['title'],
         'description' => $validated['description'],
         'price_per_day' => $validated['price_per_day'],
