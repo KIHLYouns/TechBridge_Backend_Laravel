@@ -62,11 +62,12 @@ Route::middleware('auth:sanctum')->get('/users/{id}/reviews', [UserReviewsContro
 //Client
 Route::get('/reviews/clients/{clientId}', [ClientReviewsController::class, 'getClientReviews']);
 
-// Review submission route
 Route::post('/reviews', [ReviewController::class, 'store']);
 
 // Reviews routes
-Route::middleware('auth:sanctum')->get('/reviews/check', [ReviewCheckController::class, 'checkReview']);
+// Route::middleware('auth:sanctum')->get('/reviews/check', [ReviewCheckController::class, 'checkReview']);
+Route::get('/reviews/check', [ReviewCheckController::class, 'checkReview']);
+
 
 // Reviews Listing
-Route::get('/listings/{listing}/reviews', [ListingReviewsController::class, 'getReviews']);
+Route::get('/listings/{listingId}/reviews', [ListingReviewsController::class, 'getReviews']);

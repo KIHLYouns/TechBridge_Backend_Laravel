@@ -14,6 +14,7 @@ class Reservation extends Model
     protected $fillable = [
         'start_date',
         'end_date',
+        'total_cost',
         'status',
         'contract_url',
         'created_at',

@@ -22,9 +22,9 @@ class AuthController extends Controller
             'email'         => 'required|string|email|unique:user,email',
             'password'      => 'required|string|min:6',
             'phone_number'  => 'required|string',
-            'address'       => 'required|string',
             'latitude'      => 'required|numeric',
             'longitude'     => 'required|numeric',
+            'is_partner'   => 'required|boolean',
         ]);
 
         $response = Http::withHeaders([
@@ -61,7 +61,9 @@ class AuthController extends Controller
         $city = City::whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($cityName) . '%'])->first();
 
         if (!$city) {
-            return response()->json(['error' => "La ville $cityName n'existe pas dans la base de données"], 400);
+            $city = City::create([
+                'name' => $cityName,
+            ]);
         }
 
         $user = User::create([
@@ -73,8 +75,11 @@ class AuthController extends Controller
             'phone_number' => $request->phone_number,
             'address'      => $request->address,
             'city_id'      => $city->id,
+            'longitude'   => $request->longitude,
+            'latitude'    => $request->latitude,
             'role'         => 'USER',
             'join_date'    => now(),
+            'is_partner'   => $request->is_partner,
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;

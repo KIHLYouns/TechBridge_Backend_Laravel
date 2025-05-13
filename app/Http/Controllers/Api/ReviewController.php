@@ -32,7 +32,7 @@ class ReviewController extends Controller
             'rating' => 'required|integer|min:1|max:5',
             'comment' => 'required|string|min:5|max:500',
             'reservation_id' => 'required|integer|exists:reservation,id',
-            'listing_id' => 'sometimes|integer|exists:listing,id',
+            'listing_id' => 'required|integer|exists:listing,id',
             'type' => 'required|string|in:forPartner,forClient,forObject',
         ]);
 
@@ -115,11 +115,7 @@ class ReviewController extends Controller
             $review->type = $request->type;
             $review->is_visible = false; // Default to not visible
             $review->created_at = Carbon::now();
-            
-            // Set listing ID for object reviews
-            if ($request->type === 'forObject' && $request->has('listing_id')) {
-                $review->listing_id = $request->listing_id;
-            }
+            $review->listing_id = $request->listing_id;
             
             $review->save();
             $reviewee = User::find($request->reviewee_id);
