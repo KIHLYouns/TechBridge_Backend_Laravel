@@ -38,10 +38,11 @@ Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{id}', [CategoryController::class, 'show']);
 
 
-// ✅ Routes API SANS auth pour tester facilement
+// ✅ Routes des profile et partner enabled 
 Route::prefix('users')->group(function() {
     Route::get('/{id}/profile', [UserController::class, 'show']);
     Route::patch('/{id}/profile', [UserController::class, 'updateById']);
+     Route::post('/{id}/partner/enable', [UserController::class, 'enablePartner']);
 });
 
 //Route de feature/login-logout-api
