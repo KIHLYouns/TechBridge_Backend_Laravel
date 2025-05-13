@@ -344,8 +344,8 @@ class ListingController extends Controller
 
                 if ($activeCount >= 5) {
                     return response()->json([
-                        'error' => 'Ce partenaire a déjà 5 annonces actives. Vous devez en désactiver une avant d’en activer une autre.'
-                    ], 403);
+                        'warning' => 'Vous avez déjà 5 annonces actives. Vous devez en désactiver une avant d’en activer une autre.'
+                    ], 200);
                 }
 
                 $listing->status = 'active';
@@ -372,6 +372,7 @@ class ListingController extends Controller
         try {
             $listing = Listing::findOrFail($id);
             $currentStatus = $listing->status;
+            $newStatus = $currentStatus; // Initialiser avec le statut actuel
 
             if ($currentStatus === 'archived') {
                 // Désarchivage : on veut la remettre active si possible
@@ -380,28 +381,35 @@ class ListingController extends Controller
                                       ->count();
 
                 if ($activeCount >= 5) {
-                    $listing->status = 'inactive';
+                    $newStatus = 'inactive'; // Définir le nouveau statut
+                    $listing->status = $newStatus;
                     $listing->save();
 
                     return response()->json([
-                        'warning' => 'Le partenaire a déjà 5 annonces actives. L’annonce a été désarchivée en tant qu’"inactive".'
-                    ], 403);
+                        'status'  => $newStatus, // Ajouter le statut à la réponse
+                        'warning' => 'Vous avez déjà 5 annonces actives. L’annonce a été désarchivée en tant qu’"inactive".',
+                        'message' => 'L’annonce a été désarchivée en tant qu’"inactive".' // Message optionnel pour la cohérence
+                    ], 200); // OK, même avec un avertissement
                 }
 
-                $listing->status = 'active';
+                $newStatus = 'active'; // Définir le nouveau statut
+                $listing->status = $newStatus;
                 $listing->save();
 
                 return response()->json([
+                    'status'  => $newStatus, // Ajouter le statut à la réponse
                     'message' => 'L’annonce a été désarchivée avec succès (statut : active).'
                 ], 200);
             }
 
             // Si l’annonce est active ou inactive, on l’archive
             if (in_array($currentStatus, ['active', 'inactive'])) {
-                $listing->status = 'archived';
+                $newStatus = 'archived'; // Définir le nouveau statut
+                $listing->status = $newStatus;
                 $listing->save();
 
                 return response()->json([
+                    'status'  => $newStatus, // Ajouter le statut à la réponse
                     'message' => 'L’annonce a été archivée avec succès.'
                 ], 200);
             }
