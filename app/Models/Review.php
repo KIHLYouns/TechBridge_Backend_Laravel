@@ -89,42 +89,58 @@ class Review extends Model
         if (!$reservation) {
             return;
         }
-        
-        // Check if both parties have left reviews
+
+        // Reviews des différents types
         $clientReview = self::where('reservation_id', $reservationId)
             ->where('reviewer_id', $reservation->client_id)
+            ->where('type', 'forPartner')
             ->first();
-            
+
         $partnerReview = self::where('reservation_id', $reservationId)
             ->where('reviewer_id', $reservation->partner_id)
+            ->where('type', 'forClient')
             ->first();
-        
-        // If both reviews exist, make them visible
-        if ($clientReview && $partnerReview) {
-            $clientReview->update(['is_visible' => true]);
-            $partnerReview->update(['is_visible' => true]);
 
-            // Trigger rating updates
-            self::updateEntityRatings($clientReview);
-            self::updateEntityRatings($partnerReview);
-            return;
-        }
-        
-        // If one week has passed since reservation end, make any existing reviews visible
+        $objectReview = self::where('reservation_id', $reservationId)
+            ->where('type', 'forObject')
+            ->first();
+
         $oneWeekAfterEnd = Carbon::parse($reservation->end_date)->addWeek();
-        
-        if (Carbon::now()->gte($oneWeekAfterEnd)) {
-            if ($clientReview) {
+
+        // 🟢 Règle principale : si client a reviewé le partenaire + l'objet ET partenaire a reviewé le client
+        if ($clientReview && $partnerReview && $objectReview) {
+            if (!$clientReview->is_visible) {
                 $clientReview->update(['is_visible' => true]);
                 self::updateEntityRatings($clientReview);
             }
-            
-            if ($partnerReview) {
+            if (!$partnerReview->is_visible) {
                 $partnerReview->update(['is_visible' => true]);
                 self::updateEntityRatings($partnerReview);
             }
+            if (!$objectReview->is_visible) {
+                $objectReview->update(['is_visible' => true]);
+                self::updateEntityRatings($objectReview);
+            }
+            return;
+        }
+
+    // ⏳ Règle du délai de 1 semaine : on rend visibles les reviews existants
+    if (Carbon::now()->gte($oneWeekAfterEnd)) {
+        if ($clientReview && !$clientReview->is_visible) {
+            $clientReview->update(['is_visible' => true]);
+            self::updateEntityRatings($clientReview);
+        }
+        if ($partnerReview && !$partnerReview->is_visible) {
+            $partnerReview->update(['is_visible' => true]);
+            self::updateEntityRatings($partnerReview);
+        }
+        if ($objectReview && !$objectReview->is_visible) {
+            $objectReview->update(['is_visible' => true]);
+            self::updateEntityRatings($objectReview);
         }
     }
+}
+
 
     /**
      * Update ratings for the appropriate entity based on the review type
