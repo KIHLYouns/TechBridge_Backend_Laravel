@@ -25,13 +25,15 @@ class Image extends Model
         return $this->belongsTo(Listing::class);
     }
 
-    public function getFullUrlAttribute(): ?string
+          public function getFullUrlAttribute(): ?string
     {
         if ($this->url) {
+          
             return asset('storage/' . $this->url);
         }
         return null;
     }
 
-    protected $appends = ['full_url'];
+        protected $appends = ['full_url'];
+
 }
