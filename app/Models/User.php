@@ -39,6 +39,7 @@ class User extends Authenticatable
         'latitude',
         'city_id',
         'join_date',
+        'is_suspend',
     ];
 
     /**
