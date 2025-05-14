@@ -29,7 +29,7 @@ class Image extends Model
         if ($this->url) {
             // 'public' est le nom du disque configuré dans config/filesystems.php
             // Storage::url() génère une URL complète.
-            return Storage::disk('public')->url($this->url);
+            return asset('storage/'.$this->url);
         }
         return null;
     }
