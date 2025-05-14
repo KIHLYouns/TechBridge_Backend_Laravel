@@ -89,7 +89,29 @@ class UserController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'User updated successfully',
-            'data' => $user
+            'data' => [
+                'id' => $user->id,
+                'username' => $user->username,
+                'firstname' => $user->firstname,
+                'lastname' => $user->lastname,
+                'email' => $user->email,
+                'phone_number' => $user->phone_number,
+                'address' => $user->address,
+                'avatar_url' => $user->avatar_url,
+                'client_rating' => $user->client_rating,
+                'partner_rating' => $user->partner_rating,
+                'join_date' => $user->join_date,
+                'city' => [
+                    'id' => $user->city->id ?? null,
+                    'name' => $user->city->name ?? null,
+                ],
+                'role' => $user->role,
+                'is_partner' => $user->is_partner,
+                'client_reviews' => $user->client_reviews,
+                'partner_reviews' => $user->partner_reviews,
+                'longitude' => $user->longitude,
+                'latitude' => $user->latitude,
+            ]
         ], 200);
 
     } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
