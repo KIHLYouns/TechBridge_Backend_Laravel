@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Image;
 use App\Models\Availability;
+use App\Models\User;
 use Carbon\Carbon;
 
 class ListingController extends Controller
@@ -148,6 +149,8 @@ class ListingController extends Controller
                 ->where('status', 'active')
                 ->count();
 
+            $partner = User::find($validated['partner_id']);
+
             if ($activeListingsCount >= 5) {
                 $status = 'inactive';
                 $statusMessage = "Le partenaire a déjà 5 annonces actives. Cette annonce a été créée avec le statut 'inactive'.";
@@ -165,6 +168,7 @@ class ListingController extends Controller
                 'delivery_option' => $validated['delivery_option'],
                 'is_premium' => $validated['is_premium'],
                 'created_at' => now(),
+                'city_id' => $partner->city_id,
             ];
 
             if ($validated['is_premium']) {
