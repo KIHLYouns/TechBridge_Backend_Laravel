@@ -15,7 +15,7 @@ use App\Http\Controllers\Api\ClientReviewsController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\ReviewCheckController;
 use App\Http\Controllers\Api\ListingReviewsController;
-
+use App\Http\Controllers\Api\PartnerReviewsController;
 
 
 Route::prefix('listings')->group(function () {
