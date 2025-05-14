@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use App\Mail\ReviewSubmittedMail;
 
 class ReviewController extends Controller
@@ -185,7 +186,7 @@ class ReviewController extends Controller
             ->avg('rating');
             
         User::where('id', $partnerId)->update([
-            'partner_rating' => $avgRating ? round($avgRating, 1) : null
+            'partner_rating' => $avgRating ? round($avgRating, 1) : 0.0
         ]);
     }
     
@@ -201,9 +202,13 @@ class ReviewController extends Controller
             ->where('type', 'forClient')
             ->where('is_visible', true)
             ->avg('rating');
+
+        Log::info('Client ID: ' . $clientId);
+        Log::info('Average Rating: ' . $avgRating);
+        Log::info('Rounded Rating: ' . ($avgRating ? round($avgRating, 1) : 0.0));
             
         User::where('id', $clientId)->update([
-            'client_rating' => $avgRating ? round($avgRating, 1) : null
+            'client_rating' => $avgRating ? round($avgRating, 1) : 0.0
         ]);
     }
     
@@ -221,7 +226,7 @@ class ReviewController extends Controller
             ->avg('rating');
             
         Listing::where('id', $listing_id)->update([
-            'equipment_rating' => $avgRating ? round($avgRating, 1) : null
+            'equipment_rating' => $avgRating ? round($avgRating, 1) : 0.0
         ]);
     }
     
