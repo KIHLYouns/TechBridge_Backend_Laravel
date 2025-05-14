@@ -289,14 +289,17 @@ class ReservationController extends Controller
             }
 
             $reservations = Reservation::with([
-                    'listing:id,title',
-                    'partner:id,username,email,phone_number,avatar_url',
-                    'client:id,username,email,phone_number,avatar_url'
-                ])
-                ->whereHas('listing', function ($query) use ($id) {
-                    $query->where('partner_id', $id);
-                })
-                ->get();
+                'listing' => function($query) {
+                    $query->select('id','title')
+                          ->with('images'); // Charger la relation images
+                },
+                'partner:id,username,email,phone_number,avatar_url',
+                'client:id,username,email,phone_number,avatar_url'
+            ])
+            ->whereHas('listing', function ($query) use ($id) {
+                $query->where('partner_id', $id);
+            })
+            ->get();
 
             // Mettre à jour les statuts des réservations
             $reservations = $this->updateReservationStatuses($reservations);
