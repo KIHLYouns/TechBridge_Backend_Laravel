@@ -14,6 +14,8 @@ use App\Mail\ReservationCanceledMail;
 use App\Mail\ReservationDeclined;
 use App\Http\Controllers\Api\ListingController;
 use Carbon\Carbon;
+use App\Models\Payment;
+
 
 class ReservationController extends Controller
 {
@@ -75,6 +77,24 @@ class ReservationController extends Controller
                 'total_cost' => $totalCost,
                 'created_at' => now()
             ]);
+
+            // Calcul des frais
+                $commissionFee = $totalCost * 0.15;
+                $amount = $totalCost + $commissionFee;
+                $paymentDate = now();
+
+                $payment = Payment::create([
+                    'amount' => $amount,
+                    'commission_fee' => $commissionFee,
+                    'partner_payout' => $totalCost,
+                    'payment_date' => $paymentDate,
+                    'status' => 'pending',
+                    'payment_method' => 'credit_card',
+                    // 'transaction_id' est généré automatiquement dans le modèle
+                    'client_id' => $validated['client_id'],
+                    'reservation_id' => $reservation->id,
+                    'partner_id' => $listing->partner_id,
+                ]);
 
             return response()->json([
                 'success' => true,
@@ -347,6 +367,13 @@ class ReservationController extends Controller
     
             $reservation->status = 'canceled';
             $reservation->save();
+
+                  // Mettre à jour le statut du paiement à "refunded"
+        $payment = Payment::where('reservation_id', $reservation->id)->first();
+        if ($payment) {
+            $payment->status = 'refunded';
+            $payment->save();
+        }
     
             $partner = $reservation->partner; 
             if ($partner && $partner->email) {
@@ -394,6 +421,13 @@ class ReservationController extends Controller
             // Update status first
             $reservation->status = 'confirmed';
             $reservation->save();
+
+                    // Mise à jour du statut du paiement en 'completed'
+        $payment = $reservation->payment; // On récupère le paiement associé à la réservation
+        if ($payment) {
+            $payment->status = 'completed'; // Modification du statut du paiement
+            $payment->save(); // Sauvegarder les modifications
+        }
     
             try {
                 // Send emails after status is confirmed
@@ -442,6 +476,13 @@ class ReservationController extends Controller
             $reservation->status = 'declined';
             $reservation->save();
     
+                    // Mise à jour du statut du paiement en 'refunded'
+        $payment = $reservation->payment; 
+        if ($payment) {
+            $payment->status = 'refunded'; 
+            $payment->save(); 
+        }
+
             // Envoyer l'email de notification au client
             $client = $reservation->client; // Supposant qu'il y a une relation 'client' dans le modèle Reservation
             $partner = $reservation->partner; // Supposant qu'il y a une relation 'partner'

@@ -44,4 +44,10 @@ class Reservation extends Model
     {
         return $this->belongsTo(User::class, 'client_id');
     }
+
+    public function payment()
+{
+    return $this->hasOne(Payment::class, 'reservation_id'); 
+
+}
 }
