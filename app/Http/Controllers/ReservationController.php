@@ -24,14 +24,14 @@ class ReservationController extends Controller
         try {
             $validated = $request->validate([
                 'start_date' => 'required|date|after_or_equal:today',
-                'end_date' => 'required|date|after:start_date',
+                'end_date' => 'required|date|after_or_equal:start_date', // Modifié de 'after' à 'after_or_equal'
                 'listing_id' => 'required|exists:listing,id',
                 'client_id' => 'required|exists:user,id',
                 'delivery_option' => 'boolean'
             ]);
-
+    
             $listing = Listing::find($validated['listing_id']);
-
+    
             if (!$listing) {
                 return response()->json([
                     'success' => false,
@@ -39,7 +39,7 @@ class ReservationController extends Controller
                     'available' => false
                 ], 404);
             }
-
+    
             $existingReservations = Reservation::where('listing_id', $validated['listing_id'])
                 ->where(function ($query) use ($validated) {
                     $query->whereBetween('start_date', [$validated['start_date'], $validated['end_date']])
@@ -51,7 +51,7 @@ class ReservationController extends Controller
                 })
                 ->whereIn('status', ['pending', 'confirmed', 'ongoing'])
                 ->exists();
-
+    
             if ($existingReservations) {
                 return response()->json([
                     'success' => false,
@@ -59,13 +59,13 @@ class ReservationController extends Controller
                     'available' => false
                 ], 409);
             }
-
+    
             // Calcul du coût total
             $startDate = Carbon::parse($validated['start_date']);
             $endDate = Carbon::parse($validated['end_date']);
             $days = $startDate->diffInDays($endDate) + 1; // inclut le jour de début
             $totalCost = $days * $listing->price_per_day;
-
+    
             $reservation = Reservation::create([
                 'start_date' => $validated['start_date'],
                 'end_date' => $validated['end_date'],
@@ -77,13 +77,13 @@ class ReservationController extends Controller
                 'total_cost' => $totalCost,
                 'created_at' => now()
             ]);
-
+    
             // Calcul des frais
             $commissionFee = $totalCost * 0.15;
             $amount = $totalCost;
             $partner_payout = $amount - $commissionFee;
             $paymentDate = now();
-
+    
             $payment = Payment::create([
                 'amount' => $amount,
                 'commission_fee' => $commissionFee,
@@ -91,19 +91,18 @@ class ReservationController extends Controller
                 'payment_date' => $paymentDate,
                 'status' => 'pending',
                 'payment_method' => 'credit_card',
-                // 'transaction_id' est généré automatiquement dans le modèle
                 'client_id' => $validated['client_id'],
                 'reservation_id' => $reservation->id,
                 'partner_id' => $listing->partner_id,
             ]);
-
+    
             return response()->json([
                 'success' => true,
                 'message' => 'Réservation créée avec succès',
                 'data' => $reservation,
                 'available' => true
             ], 201);
-
+    
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
