@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Mail;
 use App\Mail\ClientInfoMail;
 use App\Mail\PartnerInfoMail;
 use App\Mail\ReservationCanceledMail;
+use App\Mail\ReservationDeclined;
 use App\Http\Controllers\Api\ListingController;
 use Carbon\Carbon;
 
@@ -291,7 +292,7 @@ class ReservationController extends Controller
             $reservations = Reservation::with([
                 'listing' => function($query) {
                     $query->select('id','title')
-                          ->with('images'); // Charger la relation images
+                          ->with('images'); 
                 },
                 'partner:id,username,email,phone_number,avatar_url',
                 'client:id,username,email,phone_number,avatar_url'
@@ -368,51 +369,57 @@ class ReservationController extends Controller
     {
         try {
             $reservation = Reservation::find($id);
-
+    
             if (!$reservation) {
                 \Log::warning("Reservation not found with ID: $id");
                 return response()->json(['error' => 'Reservation not found'], 404);
             }
-
+    
             if ($reservation->status === 'canceled') {
                 return response()->json(['error' => 'Cannot confirm a canceled reservation.'], 400);
             }
-
+    
+            // Check if already confirmed first
             if ($reservation->status === 'confirmed') {
-                $client = $reservation->client;
-                $partner = $reservation->partner;
-
-                if (!$client || !$partner) {
-                    return response()->json(['error' => 'Client or Partner data is missing.'], 500);
-                }
-
-                try {
-                    Mail::to($partner->email)->send(new ClientInfoMail($client));
-                    Mail::to($client->email)->send(new PartnerInfoMail($partner));
-                } catch (\Exception $mailException) {
-                    \Log::error("Failed to send emails for confirmed reservation ID: $id", [
-                        'error' => $mailException->getMessage(),
-                    ]);
-                    return response()->json(['error' => 'Failed to send emails.'], 500);
-                }
-
-                return response()->json(['message' => 'Reservation already confirmed. Emails sent.'], 200);
+                return response()->json(['message' => 'Reservation is already confirmed.'], 200);
             }
-
+    
+            $client = $reservation->client;
+            $partner = $reservation->partner;
+    
+            if (!$client || !$partner) {
+                return response()->json(['error' => 'Client or Partner data is missing.'], 500);
+            }
+    
+            // Update status first
             $reservation->status = 'confirmed';
             $reservation->save();
-
+    
+            try {
+                // Send emails after status is confirmed
+                Mail::to($partner->email)->send(new ClientInfoMail($client));
+                Mail::to($client->email)->send(new PartnerInfoMail($partner));
+            } catch (\Exception $mailException) {
+                \Log::error("Failed to send emails for reservation ID: $id", [
+                    'error' => $mailException->getMessage(),
+                ]);
+                // Note: Status is already saved as confirmed even if emails fail
+                return response()->json([
+                    'error' => 'Reservation confirmed but failed to send emails.',
+                    'reservation' => $reservation
+                ], 500);
+            }
+    
             return response()->json([
-                'message' => 'Reservation confirmed successfully.',
+                'message' => 'Reservation confirmed successfully and emails sent.',
                 'reservation' => $reservation
             ], 200);
-
+    
         } catch (\Exception $e) {
             \Log::error("Error confirming reservation with ID $id", [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-
             return response()->json(['error' => 'Server error'], 500);
         }
     }
@@ -425,6 +432,7 @@ class ReservationController extends Controller
             if (!$reservation) {
                 return response()->json(['error' => 'Reservation not found'], 404);
             }
+            
             if (in_array($reservation->status, ['canceled', 'ongoing'])) {
                 return response()->json([
                     'error' => 'This reservation cannot be declined because it is already ' . $reservation->status . '.'
@@ -433,14 +441,26 @@ class ReservationController extends Controller
     
             $reservation->status = 'declined';
             $reservation->save();
+    
+            // Envoyer l'email de notification au client
+            $client = $reservation->client; // Supposant qu'il y a une relation 'client' dans le modèle Reservation
+            $partner = $reservation->partner; // Supposant qu'il y a une relation 'partner'
+    
+            if ($client && $client->email) {
+                Mail::to($client->email)->send(new ReservationDeclined(
+                    $reservation,
+                    $partner->name ?? 'le partenaire'
+                ));
+            }
+    
             return response()->json([
                 'message' => 'Reservation declined successfully.',
                 'reservation' => $reservation
             ], 200);
     
         } catch (\Exception $e) {
+            \Log::error('Error declining reservation: ' . $e->getMessage());
             return response()->json(['error' => 'Server error'], 500);
         }
     }
-
 }
