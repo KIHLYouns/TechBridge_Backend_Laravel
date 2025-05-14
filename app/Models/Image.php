@@ -1,5 +1,6 @@
 <?php
 
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -19,20 +20,18 @@ class Image extends Model
 
     public $timestamps = false;
 
-        public function listing()
+    public function listing()
     {
         return $this->belongsTo(Listing::class);
     }
 
-        public function getFullUrlAttribute(): ?string
+    public function getFullUrlAttribute(): ?string
     {
         if ($this->url) {
-            // 'public' est le nom du disque configuré dans config/filesystems.php
-            // Storage::url() génère une URL complète.
-            return asset('storage/'.$this->url);
+            return asset('storage/' . $this->url);
         }
         return null;
     }
 
-        protected $appends = ['full_url'];
+    protected $appends = ['full_url'];
 }
