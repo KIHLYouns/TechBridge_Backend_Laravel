@@ -58,10 +58,12 @@ Route::get('/reservations/partner/{id}', [ReservationController::class, 'getByPa
 Route::apiResource('reservations', ReservationController::class);
 
 // User review routes
-//partner
+//partner and client
 Route::middleware('auth:sanctum')->get('/users/{id}/reviews', [UserReviewsController::class, 'getUserReviews']);
 //Client
 Route::get('/reviews/clients/{clientId}', [ClientReviewsController::class, 'getClientReviews']);
+//Partner
+Route::get('/reviews/partners/{partnerId}', [PartnerReviewsController::class, 'getPartnerReviews']);
 
 Route::post('/reviews', [ReviewController::class, 'store']);
 
