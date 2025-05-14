@@ -105,6 +105,13 @@ class AuthController extends Controller
             ]);
         }
 
+        // Vérification si l'utilisateur est suspendu
+        if ($user->is_suspend) {
+            return response()->json([
+                'message' => 'Votre compte a été suspendu.',
+            ], 408);
+        }
+
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
