@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\ReviewCheckController;
 use App\Http\Controllers\Api\ListingReviewsController;
 use App\Http\Controllers\Api\PartnerReviewsController;
+use App\Http\Controllers\Api\AdminController;
 
 
 Route::prefix('listings')->group(function () {
@@ -77,3 +78,15 @@ Route::get('/reviews/check', [ReviewCheckController::class, 'checkReview']);
 
 // Reviews Listing
 Route::get('/listings/{listingId}/reviews', [ListingReviewsController::class, 'getReviews']);
+
+
+Route::prefix('admin')->group(function () {
+    // API pour récupérer les utilisateurs avec rôle USER
+    Route::get('/users', [AdminController::class, 'getUsers']);
+
+    // API pour récupérer toutes les annonces
+    Route::get('/listings', [AdminController::class, 'getAllListings']);
+
+    Route::post('/users/{id}/toggle-suspension', [AdminController::class, 'toggleUserSuspension']);
+
+    });
