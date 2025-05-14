@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Image;
 use App\Models\Availability;
+use Carbon\Carbon;
 
 class ListingController extends Controller
 {
@@ -58,12 +59,16 @@ class ListingController extends Controller
             $listings = $query->get();
             Log::info('Annonces récupérées avec succès.', ['count' => $listings->count()]);
 
+            $listings = $this->updatePremiumStatuses($listings);
+
             // Traitement des résultats
             $result = $listings->map(function ($listing) {
                 try {
                     Log::info('Traitement d\'une annonce.', ['listing_id' => $listing->id]);
 
-                  $firstImageFullUrl = $listing->images->first()->full_url ?? null;
+
+
+                    $firstImageFullUrl = $listing->images->first()->full_url ?? null;
 
                     Log::info('Image principale récupérée.', ['main_image' => $firstImageFullUrl]);
 
@@ -71,24 +76,24 @@ class ListingController extends Controller
                     $city = $listing->city;
 
                     return [
-                        'id'             => $listing->id,
-                        'title'          => $listing->title,
-                        'price_per_day'  => $listing->price_per_day,
-                        'is_premium'     => $listing->is_premium,
+                        'id' => $listing->id,
+                        'title' => $listing->title,
+                        'price_per_day' => $listing->price_per_day,
+                        'is_premium' => $listing->is_premium,
                         'equipment_rating' => $listing->equipment_rating,
-                        'main_image'     => $firstImageFullUrl,
-                        'partner'        => $partner ? [
-                            'id'             => $partner->id,
-                            'username'       => $partner->username,
-                            'avatar_url'     => $partner->avatar_url,
+                        'main_image' => $firstImageFullUrl,
+                        'partner' => $partner ? [
+                            'id' => $partner->id,
+                            'username' => $partner->username,
+                            'avatar_url' => $partner->avatar_url,
                             'partner_rating' => $partner->partner_rating,
-                            'partner_reviews'=> $partner->partner_reviews,
-                            'coordinates'    => [
-                                'latitude'    => $partner->latitude,
-                                'longitude'   => $partner->longitude,
+                            'partner_reviews' => $partner->partner_reviews,
+                            'coordinates' => [
+                                'latitude' => $partner->latitude,
+                                'longitude' => $partner->longitude,
                             ],
                             'city' => $city ? [
-                                'id'   => $city->id,
+                                'id' => $city->id,
                                 'name' => $city->name,
                             ] : null,
                         ] : null,
@@ -113,110 +118,93 @@ class ListingController extends Controller
         }
     }
 
-  public function store(Request $request)
-{
-    try {
-        Log::info("Début de la création d'une annonce");
-        Log::debug("Payload complet store (sauf fichiers):", $request->except(['new_images[]', 'new_images']));
+    public function store(Request $request)
+    {
+        try {
+            Log::info("Début de la création d'une annonce");
+            Log::debug("Payload complet store (sauf fichiers):", $request->except(['new_images[]', 'new_images']));
 
-        // Validation des données
-        $validated = $request->validate([
-            'partner_id' => 'required|exists:user,id',
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'price_per_day' => 'required|numeric|min:0.01',
-            'category_id' => 'required|exists:category,id',
-            'delivery_option' => 'required|boolean',
-            'new_images' => 'required|array|min:1|max:5',
-            'new_images.*' => 'image|mimes:jpeg,png,jpg,gif,svg,webp|max:5120',
-            'availabilities' => 'nullable|array',
-            'availabilities.*.start_date' => 'required_with:availabilities|date_format:Y-m-d',
-            'availabilities.*.end_date' => 'required_with:availabilities|date_format:Y-m-d|after_or_equal:availabilities.*.start_date',
-            'is_premium' => 'required|boolean',
-            'premium_duration' => 'nullable|integer|in:7,15,30|required_if:is_premium,true',
-        ]);
+            // Validation des données
+            $validated = $request->validate([
+                'partner_id' => 'required|exists:user,id',
+                'title' => 'required|string|max:255',
+                'description' => 'required|string',
+                'price_per_day' => 'required|numeric|min:0.01',
+                'category_id' => 'required|exists:category,id',
+                'delivery_option' => 'required|boolean',
+                'new_images' => 'required|array|min:1|max:5',
+                'new_images.*' => 'image|mimes:jpeg,png,jpg,gif,svg,webp|max:5120',
+                'availabilities' => 'nullable|array',
+                'availabilities.*.start_date' => 'required_with:availabilities|date_format:Y-m-d',
+                'availabilities.*.end_date' => 'required_with:availabilities|date_format:Y-m-d|after_or_equal:availabilities.*.start_date',
+                'is_premium' => 'required|boolean',
+                'premium_duration' => 'nullable|integer|in:7,15,30|required_if:is_premium,true',
+            ]);
 
-        Log::info("Données validées pour création : " . json_encode($validated));
+            Log::info("Données validées pour création : " . json_encode($validated));
 
-        $status = 'active';
-        $activeListingsCount = Listing::where('partner_id', $validated['partner_id'])
-            ->where('status', 'active')
-            ->count();
+            $status = 'active';
+            $activeListingsCount = Listing::where('partner_id', $validated['partner_id'])
+                ->where('status', 'active')
+                ->count();
 
-        if ($activeListingsCount >= 5) {
-            $status = 'inactive';
-            $statusMessage = "Le partenaire a déjà 5 annonces actives. Cette annonce a été créée avec le statut 'inactive'.";
-        } else {
-            $statusMessage = "Annonce créée avec succès.";
-        }
-
-        $listingData = [
-            'partner_id' => $validated['partner_id'],
-            'title' => $validated['title'],
-            'description' => $validated['description'],
-            'price_per_day' => $validated['price_per_day'],
-            'status' => $status,
-            'category_id' => $validated['category_id'],
-            'delivery_option' => $validated['delivery_option'],
-            'is_premium' => $validated['is_premium'],
-            'created_at' => now(),
-        ];
-
-        if ($validated['is_premium']) {
-            $duration = (int) $validated['premium_duration'];
-            $listingData['premium_start_date'] = now();
-            $listingData['premium_end_date'] = now()->addDays($duration);
-        }
-
-        $listing = Listing::create($listingData);
-
-        // Stockage des images et génération des URL
-        if ($request->hasFile('new_images')) {
-            foreach ($request->file('new_images') as $imageFile) {
-                // Stocker l'image et obtenir le chemin relatif
-                $path = $imageFile->store('images', 'public');
-
-                // Générer l'URL complète de l'image
-                // $url = asset('storage/' . $path);
-
-                // Enregistrer l'image dans la base de données
-                $listing->images()->create(['url' => $path]);
-
-                // Enregistrer aussi dans la table 'images' si nécessaire
-                // Image::create([
-                //     'listing_id' => $listing->id,
-                //     'url' => $path, // Chemin relatif
-                // ]);
-
-                // Log::info('Image URL: ' . $url);
+            if ($activeListingsCount >= 5) {
+                $status = 'inactive';
+                $statusMessage = "Le partenaire a déjà 5 annonces actives. Cette annonce a été créée avec le statut 'inactive'.";
+            } else {
+                $statusMessage = "Annonce créée avec succès.";
             }
-        }
 
-        // Stockage des disponibilités
-        if (!empty($validated['availabilities'])) {
-            foreach ($validated['availabilities'] as $availability) {
-                $listing->availabilities()->create([
-                    'start_date' => $availability['start_date'],
-                    'end_date' => $availability['end_date'],
-                ]);
+            $listingData = [
+                'partner_id' => $validated['partner_id'],
+                'title' => $validated['title'],
+                'description' => $validated['description'],
+                'price_per_day' => $validated['price_per_day'],
+                'status' => $status,
+                'category_id' => $validated['category_id'],
+                'delivery_option' => $validated['delivery_option'],
+                'is_premium' => $validated['is_premium'],
+                'created_at' => now(),
+            ];
+
+            if ($validated['is_premium']) {
+                $duration = (int) $validated['premium_duration'];
+                $listingData['premium_start_date'] = now();
+                $listingData['premium_end_date'] = now()->addDays($duration);
             }
+
+            $listing = Listing::create($listingData);
+
+            if ($request->hasFile('new_images')) {
+                foreach ($request->file('new_images') as $imageFile) {
+                    $path = $imageFile->store('images', 'public');
+                    $listing->images()->create(['url' => $path]);
+                }
+            }
+
+            if (!empty($validated['availabilities'])) {
+                foreach ($validated['availabilities'] as $availability) {
+                    $listing->availabilities()->create([
+                        'start_date' => $availability['start_date'],
+                        'end_date' => $availability['end_date'],
+                    ]);
+                }
+            }
+
+            $listing->load(['images', 'availabilities', 'category', 'city', 'partner.city']);
+            return response()->json([
+                'message' => $statusMessage,
+                'listing' => $listing,
+            ], 201);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error("Erreur de validation lors de la création : " . json_encode($e->errors()));
+            return response()->json(['message' => 'Erreur de validation', 'errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            Log::error("Erreur création annonce : " . $e->getMessage());
+            return response()->json(['message' => 'Erreur lors de la création de l\'annonce.'], 500);
         }
-
-        $listing->load(['images', 'availabilities', 'category', 'city', 'partner.city']);
-        return response()->json([
-            'message' => $statusMessage,
-            'listing' => $listing,
-        ], 201);
-
-    } catch (\Illuminate\Validation\ValidationException $e) {
-        Log::error("Erreur de validation lors de la création : " . json_encode($e->errors()));
-        return response()->json(['message' => 'Erreur de validation', 'errors' => $e->errors()], 422);
-    } catch (\Exception $e) {
-        Log::error("Erreur création annonce : " . $e->getMessage());
-        return response()->json(['message' => 'Erreur lors de la création de l\'annonce.'], 500);
     }
-}
-
 
     public function show($id)
     {
@@ -229,6 +217,8 @@ class ListingController extends Controller
                 'images',
                 'availabilities:listing_id,start_date,end_date'
             ])->findOrFail($id);
+
+            $listing = $this->updatePremiumStatuses($listing);
 
             return response()->json($listing);
         } catch (\Exception $e) {
@@ -248,6 +238,9 @@ class ListingController extends Controller
                 'images',
                 'availabilities:listing_id,start_date,end_date'
             ])->where('partner_id', $partnerId)->get();
+
+            $listings = $this->updatePremiumStatuses($listings);
+
 
             return response()->json($listings, 200);
 
@@ -300,16 +293,25 @@ class ListingController extends Controller
 
             if ($request->has('is_premium')) {
                 if ($request->boolean('is_premium')) {
-                    $duration = isset($validated['premium_duration']) ? (int)$validated['premium_duration'] : ($listing->premium_duration ?? 7);
-                    $listingUpdateData['is_premium'] = true;
-                    $listingUpdateData['premium_start_date'] = $listing->premium_start_date ?? now();
-                    $listingUpdateData['premium_end_date'] = ($listingUpdateData['premium_start_date'] instanceof \Carbon\Carbon ? $listingUpdateData['premium_start_date'] : new \Carbon\Carbon($listingUpdateData['premium_start_date']))->addDays($duration);
+                    $now = now();
+                    $duration = isset($validated['premium_duration']) ? (int) $validated['premium_duration'] : ($listing->premium_duration ?? 7);
+
+                    if (empty($listing->premium_end_date) || \Carbon\Carbon::parse($listing->premium_end_date)->lte($now)) {
+                        // La période premium est terminée ou non définie → on redémarre une nouvelle période
+                        $listingUpdateData['is_premium'] = true;
+                        $listingUpdateData['premium_start_date'] = $now;
+                        $listingUpdateData['premium_end_date'] = $now->copy()->addDays($duration);
+                    } else {
+                        // La période premium est encore en cours → on ne change rien
+                        $listingUpdateData['is_premium'] = true;
+                    }
                 } else {
                     $listingUpdateData['is_premium'] = false;
                     $listingUpdateData['premium_start_date'] = null;
                     $listingUpdateData['premium_end_date'] = null;
                 }
             }
+
 
             $listing->update($listingUpdateData);
 
@@ -356,8 +358,8 @@ class ListingController extends Controller
             if ($listing->status === 'inactive') {
                 // Compter les autres annonces actives de ce partenaire
                 $activeCount = Listing::where('partner_id', $listing->partner_id)
-                                      ->where('status', 'active')
-                                      ->count();
+                    ->where('status', 'active')
+                    ->count();
 
                 if ($activeCount >= 5) {
                     return response()->json([
@@ -375,7 +377,7 @@ class ListingController extends Controller
 
             return response()->json([
                 'message' => 'Statut de l\'annonce mis à jour avec succès.',
-                'status'  => $listing->status
+                'status' => $listing->status
             ], 200);
 
         } catch (\Exception $e) {
@@ -394,8 +396,8 @@ class ListingController extends Controller
             if ($currentStatus === 'archived') {
                 // Désarchivage : on veut la remettre active si possible
                 $activeCount = Listing::where('partner_id', $listing->partner_id)
-                                      ->where('status', 'active')
-                                      ->count();
+                    ->where('status', 'active')
+                    ->count();
 
                 if ($activeCount >= 5) {
                     $newStatus = 'inactive'; // Définir le nouveau statut
@@ -403,7 +405,7 @@ class ListingController extends Controller
                     $listing->save();
 
                     return response()->json([
-                        'status'  => $newStatus, // Ajouter le statut à la réponse
+                        'status' => $newStatus, // Ajouter le statut à la réponse
                         'warning' => 'Vous avez déjà 5 annonces actives. L’annonce a été désarchivée en tant qu’"inactive".',
                         'message' => 'L’annonce a été désarchivée en tant qu’"inactive".' // Message optionnel pour la cohérence
                     ], 200); // OK, même avec un avertissement
@@ -414,7 +416,7 @@ class ListingController extends Controller
                 $listing->save();
 
                 return response()->json([
-                    'status'  => $newStatus, // Ajouter le statut à la réponse
+                    'status' => $newStatus, // Ajouter le statut à la réponse
                     'message' => 'L’annonce a été désarchivée avec succès (statut : active).'
                 ], 200);
             }
@@ -426,7 +428,7 @@ class ListingController extends Controller
                 $listing->save();
 
                 return response()->json([
-                    'status'  => $newStatus, // Ajouter le statut à la réponse
+                    'status' => $newStatus, // Ajouter le statut à la réponse
                     'message' => 'L’annonce a été archivée avec succès.'
                 ], 200);
             }
@@ -441,6 +443,48 @@ class ListingController extends Controller
             return response()->json(['error' => 'Erreur serveur.'], 500);
         }
     }
+
+
+
+    private function updatePremiumStatuses($listings)
+    {
+        $today = Carbon::now();
+
+        if ($listings instanceof Listing) {
+            $listings = collect([$listings]);
+            $isSingle = true;
+        } else {
+            $isSingle = false;
+        }
+
+        foreach ($listings as $listing) {
+            if ($listing->premium_start_date && $listing->premium_end_date) {
+                $start = Carbon::parse($listing->premium_start_date);
+                $end = Carbon::parse($listing->premium_end_date);
+
+                if ($today->lt($start) || $today->gt($end)) {
+                    if ($listing->is_premium !== false) {
+                        $listing->is_premium = false;
+                        $listing->save();
+                        Log::info('Premium désactivé (hors période ou terminé)', ['listing_id' => $listing->id]);
+                    }
+                } elseif ($today->between($start, $end)) {
+                    if ($listing->is_premium !== true) {
+                        $listing->is_premium = true;
+                        $listing->save();
+                        Log::info('Premium activé', ['listing_id' => $listing->id]);
+                    }
+                }
+            } elseif ($listing->is_premium) {
+                // Si les dates ne sont pas définies – on désactive premium par défaut
+                $listing->is_premium = false;
+                $listing->save();
+                Log::warning('Premium corrigé (dates manquantes)', ['listing_id' => $listing->id]);
+            }
+        }
+
+        return $isSingle ? $listings->first() : $listings;
+    }
+
+
 }
-
-
