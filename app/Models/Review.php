@@ -126,19 +126,16 @@ class Review extends Model
 
     // ⏳ Règle du délai de 1 semaine : on rend visibles les reviews existants
     if (Carbon::now()->gte($oneWeekAfterEnd)) {
-        if ($clientReview && !$clientReview->is_visible) {
-            $clientReview->update(['is_visible' => true]);
-            self::updateEntityRatings($clientReview);
-        }
-        if ($partnerReview && !$partnerReview->is_visible) {
-            $partnerReview->update(['is_visible' => true]);
-            self::updateEntityRatings($partnerReview);
-        }
-        if ($objectReview && !$objectReview->is_visible) {
-            $objectReview->update(['is_visible' => true]);
-            self::updateEntityRatings($objectReview);
+        $allReviews = self::where('reservation_id', $reservationId)->get();
+
+        foreach ($allReviews as $review) {
+            if (!$review->is_visible) {
+                $review->update(['is_visible' => true]);
+                self::updateEntityRatings($review);
+            }
         }
     }
+
 }
 
 
@@ -238,3 +235,4 @@ class Review extends Model
         ]);
     }
 }
+

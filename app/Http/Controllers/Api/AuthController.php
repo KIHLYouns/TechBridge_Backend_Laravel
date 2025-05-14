@@ -49,7 +49,7 @@ class AuthController extends Controller
             return response()->json(['error' => 'Ville non trouvée à partir de la position'], 400);
         }
 
-        $cityName = preg_replace('/[^a-zA-Z\sèéêëàâäôöùûüç]/u', '', $cityName);
+        $cityName = preg_replace('/[^a-zA-ZÀ-ÿ\s]/u', '', $cityName);
         $cityName = trim(explode(' ', $cityName)[0]);
 
         Log::info("Nom de ville nettoyé : " . $cityName);
