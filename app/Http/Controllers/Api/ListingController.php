@@ -206,26 +206,37 @@ class ListingController extends Controller
         }
     }
 
-    public function show($id)
-    {
-        try {
-            $listing = Listing::with([
-                'city:id,name',
-                'partner:id,username,email,firstname,lastname,avatar_url,partner_rating,partner_reviews,longitude,latitude,city_id',
-                'partner.city:id,name',
-                'category:id,name',
-                'images',
-                'availabilities:listing_id,start_date,end_date'
-            ])->findOrFail($id);
+public function show($id) 
+{
+    try {
+        $listing = Listing::with([
+            'city:id,name',
+            'partner:id,username,email,firstname,lastname,avatar_url,partner_rating,partner_reviews,longitude,latitude,city_id',
+            'partner.city:id,name',
+            'category:id,name',
+            'images',
+            'availabilities:listing_id,start_date,end_date'
+        ])->findOrFail($id);
 
-            $listing = $this->updatePremiumStatuses($listing);
+        $listing = $this->updatePremiumStatuses($listing);
 
-            return response()->json($listing);
-        } catch (\Exception $e) {
-            Log::error("Erreur lors de la récupération de l'annonce $id : " . $e->getMessage());
-            return response()->json(['error' => 'Annonce non trouvée'], 404);
-        }
+        // Récupérer les réservations existantes (périodes réservées)
+        $booked = \App\Models\Reservation::where('listing_id', $id)
+            ->whereIn('status', ['pending', 'confirmed', 'ongoing'])
+            ->select('listing_id', 'start_date', 'end_date')
+            ->get();
+
+        // Ajouter les réservations comme champ supplémentaire
+        $listing->booked = $booked;
+
+        return response()->json($listing);
+
+    } catch (\Exception $e) {
+        Log::error("Erreur lors de la récupération de l'annonce $id : " . $e->getMessage());
+        return response()->json(['error' => 'Annonce non trouvée'], 404);
     }
+}
+
 
     public function getListingsByPartner($partnerId)
     {
