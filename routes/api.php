@@ -87,6 +87,6 @@ Route::prefix('admin')->group(function () {
     // API pour récupérer toutes les annonces
     Route::get('/listings', [AdminController::class, 'getAllListings']);
 
-    Route::post('/users/{id}/toggle-suspension', [AdminController::class, 'toggleUserSuspension']);
+    Route::post('/users/{id}/toggle-suspend', [AdminController::class, 'toggleUserSuspension']);
 
     });

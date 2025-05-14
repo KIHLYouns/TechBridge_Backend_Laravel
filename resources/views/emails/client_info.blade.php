@@ -1,18 +1,15 @@
-<p>Hello,</p>
+<p>Hello,
 
-<p>Here are the details of the client for your confirmed reservation:</p>
+Here are the details of the client for your confirmed reservation:
 
-<ul>
-    <li><strong>Username:</strong> {{ $client->username }}</li>
-    <li><strong>Name:</strong> {{ $client->firstname }} {{ $client->lastname }}</li>
-    <li><strong>Email:</strong> {{ $client->email }}</li>
-    <li><strong>Phone:</strong> {{ $client->phone_number ?? 'N/A' }}</li>
-    <li><strong>Address:</strong> {{ $client->address }}</li>
-</ul>
+- <strong>Username:</strong> {{ $client->username }}<br>
+- <strong>Name:</strong> {{ $client->firstname }} {{ $client->lastname }}<br>
+- <strong>Email:</strong> {{ $client->email }}<br>
+- <strong>Phone:</strong>  {{ $client->phone_number ?? 'N/A' }}<br>
+- <strong>Address:</strong>  {{ $client->address}}<br>
 
-<p>We have successfully sent you the amount of <strong>${{ number_format($reservation->total_cost, 2) }}</strong> for this reservation.</p>
+Please proceed accordingly.
 
-<p>Please proceed accordingly.</p>
-
-<p>Thanks,  
-{{ config('app.name') }}</p>
+Thanks,  
+{{ config('app.name') }}
+</p>
