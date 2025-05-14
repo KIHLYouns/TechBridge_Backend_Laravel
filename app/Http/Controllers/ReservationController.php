@@ -289,14 +289,17 @@ class ReservationController extends Controller
             }
 
             $reservations = Reservation::with([
-                    'listing:id,title',
-                    'partner:id,username,email,phone_number,avatar_url',
-                    'client:id,username,email,phone_number,avatar_url'
-                ])
-                ->whereHas('listing', function ($query) use ($id) {
-                    $query->where('partner_id', $id);
-                })
-                ->get();
+                'listing' => function($query) {
+                    $query->select('id','title')
+                          ->with('images'); // Charger la relation images
+                },
+                'partner:id,username,email,phone_number,avatar_url',
+                'client:id,username,email,phone_number,avatar_url'
+            ])
+            ->whereHas('listing', function ($query) use ($id) {
+                $query->where('partner_id', $id);
+            })
+            ->get();
 
             // Mettre à jour les statuts des réservations
             $reservations = $this->updateReservationStatuses($reservations);
@@ -418,7 +421,7 @@ class ReservationController extends Controller
     {
         try {
             $reservation = Reservation::find($id);
-
+    
             if (!$reservation) {
                 return response()->json(['error' => 'Reservation not found'], 404);
             }
@@ -427,14 +430,14 @@ class ReservationController extends Controller
                     'error' => 'This reservation cannot be declined because it is already ' . $reservation->status . '.'
                 ], 400);
             }
-
+    
             $reservation->status = 'declined';
             $reservation->save();
             return response()->json([
                 'message' => 'Reservation declined successfully.',
                 'reservation' => $reservation
             ], 200);
-
+    
         } catch (\Exception $e) {
             return response()->json(['error' => 'Server error'], 500);
         }
