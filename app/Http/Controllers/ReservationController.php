@@ -113,42 +113,55 @@ class ReservationController extends Controller
         }
     }
 
-    private function updateReservationStatuses($reservations)
-    {
-        $today = Carbon::today();
 
-        foreach ($reservations as $reservation) {
-            // Parse des dates pour comparaison
-            $start = Carbon::parse($reservation->start_date);
-            $end = Carbon::parse($reservation->end_date);
 
-            // Si la réservation est confirmée ou en cours
-            if (in_array($reservation->status, ['confirmed', 'ongoing'])) {
-                if ($today->between($start, $end)) {
-                    // On est dans la période de la réservation
-                    if ($reservation->status !== 'ongoing') {
-                        $reservation->status = 'ongoing';
-                        // Mettre à jour le statut du paiement à "refunded"
-                        $payment = Payment::where('reservation_id', $reservation->id)->first();
-                        if ($payment) {
-                            $payment->status = 'completed';
-                            $payment->save();
+private function updateReservationStatuses($reservations)
+{
+    $today = Carbon::today();
+
+    foreach ($reservations as $reservation) {
+        $start = Carbon::parse($reservation->start_date);
+        $end = Carbon::parse($reservation->end_date);
+
+        // Si la réservation est confirmée ou en cours
+        if (in_array($reservation->status, ['confirmed', 'ongoing'])) {
+
+            if ($today->between($start, $end)) {
+                // On est dans la période de la réservation
+                if ($reservation->status !== 'ongoing') {
+                    $reservation->status = 'ongoing';
+
+                    // Mettre à jour le statut du paiement à "completed"
+                    $payment = Payment::where('reservation_id', $reservation->id)->first();
+                    if ($payment) {
+                        $payment->status = 'completed';
+                        $payment->save();
+
+                        // Envoi de l'e-mail au partenaire
+                        if ($reservation->partner && $reservation->partner->email) {
+                            Mail::to($reservation->partner->email)->send(
+                                new PartnerPaymentSentMail($reservation)
+                            );
                         }
-                        $reservation->save();
                     }
-                } elseif ($today->gt($end)) {
-                    // Dépassé la date de fin, la réservation est terminée
-                    if ($reservation->status !== 'completed') {
-                        $reservation->status = 'completed';
-                        $reservation->save();
-                    }
-                }
-                // Si aujourd'hui est avant la date de début, elle reste confirmée
-            }
-        }
 
-        return $reservations;
+                    $reservation->save();
+                }
+
+            } elseif ($today->gt($end)) {
+                // Dépassé la date de fin, la réservation est terminée
+                if ($reservation->status !== 'completed') {
+                    $reservation->status = 'completed';
+                    $reservation->save();
+                }
+            }
+            // Si aujourd'hui est avant la date de début, elle reste confirmée
+        }
     }
+
+    return $reservations;
+}
+
 
     public function index(): JsonResponse
     {
