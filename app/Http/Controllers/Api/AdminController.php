@@ -17,6 +17,9 @@ public function getUsers()
 
         $result = $users->map(function ($user) {
             return [
+                'id'          => $user->id,
+                'role'        => $user->role,
+                'created_at'  => $user->created_at,
                 'username'    => $user->username,
                 'firstname'   => $user->firstname,
                 'lastname'    => $user->lastname,
