@@ -19,30 +19,29 @@ class UserReviewsController extends Controller
      * @return \Illuminate\Http\JsonResponse
      */
     public function getUserReviews(int $id): JsonResponse
-    {
-        // Find the user
-        $user = User::find($id);
-        
-        if (!$user) {
-            return response()->json([
-                'timestamp' => Carbon::now()->toIso8601String(),
-                'status' => 404,
-                'error' => 'Not Found',
-                'message' => "User with ID {$id} not found"
-            ], 404);
-        }
-        
-        // Get reviews received by this user as a partner (only visible ones)
-        $receivedReviews = Review::where('reviewee_id', $id)
-        ->where(function ($query) {
-            $query->where('type', 'forPartner')
-                ->orWhere('type', 'forObject');
-        })
-        ->with(['reviewer', 'reviewee', 'reservation']) // Assure-toi que la relation "reservation" est définie dans le modèle Review
+{
+    // Find the user
+    $user = User::find($id);
+
+    if (!$user) {
+        return response()->json([
+            'timestamp' => Carbon::now()->toIso8601String(),
+            'status' => 404,
+            'error' => 'Not Found',
+            'message' => "User with ID {$id} not found"
+        ], 404);
+    }
+
+    // === RECEIVED REVIEWS ===
+
+    // Reçues en tant que partenaire (forPartner uniquement)
+    $receivedAsPartner = Review::where('reviewee_id', $id)
+        ->where('type', 'forPartner')
+        ->with(['reviewer', 'reviewee', 'reservation'])
         ->get()
         ->filter(function ($review) {
             $otherReviewExists = Review::where('reservation_id', $review->reservation_id)
-                ->where('reviewer_id', $review->reviewee_id) // l'autre partie
+                ->where('reviewer_id', $review->reviewee_id)
                 ->where('reviewee_id', $review->reviewer_id)
                 ->exists();
 
@@ -53,36 +52,36 @@ class UserReviewsController extends Controller
         ->sortByDesc('created_at')
         ->values();
 
-        
-        // Get reviews given by this user as a client
-        $givenReviews = Review::where('reviewer_id', $id)
-            ->where('is_visible', true)
-            ->with(['reviewer', 'reviewee'])
-            ->orderBy('created_at', 'desc')
-            ->get();
-        
-        // Format the response according to the OpenAPI spec
-        $formattedReceivedReviews = $receivedReviews->map(function ($review) {
-            return $this->formatReview($review);
-        });
-        
-        $formattedGivenReviews = $givenReviews->map(function ($review) {
-            return $this->formatReview($review);
-        });
-        
-        return response()->json([
-            'received_reviews' => $formattedReceivedReviews,
-            'given_reviews' => $formattedGivenReviews
-        ]);
-    }
-    
-    /**
-     * Format a review according to the OpenAPI specification
-     * 
-     * @param Review $review
-     * @return array
-     */
-    private function formatReview(Review $review): array
+    // Reçues en tant que client (forClient uniquement)
+    $receivedAsClient = Review::where('reviewee_id', $id)
+        ->where('type', 'forClient')
+        ->with(['reviewer', 'reviewee'])
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+    // === GIVEN REVIEWS ===
+
+    $givenReviews = Review::where('reviewer_id', $id)
+        ->where('is_visible', true)
+        ->with(['reviewer', 'reviewee'])
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+    // Séparer les données selon le type
+    $givenAsClient = $givenReviews->filter(fn($r) => $r->type === 'forPartner')->values();
+    $givenAsPartner = $givenReviews->filter(fn($r) => $r->type === 'forClient')->values();
+
+    // === FORMAT & RETURN ===
+
+    return response()->json([
+        'received_reviews_as_partner' => $receivedAsPartner->map(fn($r) => $this->formatReview($r)),
+        'received_reviews_as_client' => $receivedAsClient->map(fn($r) => $this->formatReview($r)),
+        'given_reviews_as_client' => $givenAsClient->map(fn($r) => $this->formatReview($r)),
+        'given_reviews_as_partner' => $givenAsPartner->map(fn($r) => $this->formatReview($r)),
+    ]);
+}
+
+private function formatReview(Review $review): array
     {
         return [
             'id' => $review->id,
@@ -106,4 +105,5 @@ class UserReviewsController extends Controller
             'type' => $review->type
         ];
     }
+
 }
