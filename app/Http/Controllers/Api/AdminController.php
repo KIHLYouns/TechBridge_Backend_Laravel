@@ -75,6 +75,7 @@ public function getUsers()
 
                 $partner = $listing->partner;
                 $city = $listing->city;
+                $category = $listing->category;
 
                 return [
                     'id'               => $listing->id,
@@ -84,6 +85,10 @@ public function getUsers()
                     'equipment_rating' => $listing->equipment_rating,
                     'status'           => $listing->status,
                     'main_image'       => $firstImageFullUrl,
+                    'category'        => $category ? [
+                        'id'   => $category->id,
+                        'name' => $category->name,
+                    ] : null,
                     'partner'          => $partner ? [
                         'id'             => $partner->id,
                         'username'       => $partner->username,

@@ -108,7 +108,7 @@ class AuthController extends Controller
         // Vérification si l'utilisateur est suspendu
         if ($user->is_suspend) {
             return response()->json([
-                'message' => 'Votre compte a été suspendu.',
+                'message' => 'Your account is suspended. You cannot log in.',
             ], 408);
         }
 
