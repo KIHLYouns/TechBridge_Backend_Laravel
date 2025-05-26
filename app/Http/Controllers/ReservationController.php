@@ -137,11 +137,11 @@ private function updateReservationStatuses($reservations)
                         $payment->save();
 
                         // Envoi de l'e-mail au partenaire
-                        if ($reservation->partner && $reservation->partner->email) {
+                        /* if ($reservation->partner && $reservation->partner->email) {
                             Mail::to($reservation->partner->email)->send(
                                 new PartnerPaymentSentMail($reservation)
                             );
-                        }
+                        } */
                     }
 
                     $reservation->save();

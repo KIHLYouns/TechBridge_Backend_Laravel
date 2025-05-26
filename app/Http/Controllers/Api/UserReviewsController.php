@@ -19,69 +19,74 @@ class UserReviewsController extends Controller
      * @return \Illuminate\Http\JsonResponse
      */
     public function getUserReviews(int $id): JsonResponse
-{
-    // Find the user
-    $user = User::find($id);
+    {
+        // Find the user
+        $user = User::find($id);
 
-    if (!$user) {
+        if (!$user) {
+            return response()->json([
+                'timestamp' => Carbon::now()->toIso8601String(),
+                'status' => 404,
+                'error' => 'Not Found',
+                'message' => "User with ID {$id} not found"
+            ], 404);
+        }
+
+        // Received reviews as partner (client reviews about partner)
+        $receivedAsPartner = Review::where('reviewee_id', $id)
+            ->where('type', 'forPartner')
+            ->where('is_visible', true)
+            ->with(['reviewer', 'reviewee', 'reservation'])
+            ->get()
+            ->filter(function ($review) {
+                if (!$review->reservation) return false;
+                // Reciprocal review: partner (reviewee) must have reviewed the client (reviewer)
+                $reciprocalExists = Review::where('reservation_id', $review->reservation_id)
+                    ->where('reviewer_id', $review->reviewee_id)
+                    ->where('reviewee_id', $review->reviewer_id)
+                    ->exists();
+                $oneWeekPassed = Carbon::parse($review->reservation->end_date)->addWeek()->lt(now());
+                return $reciprocalExists || $oneWeekPassed;
+            })
+            ->sortByDesc('created_at')
+            ->values();
+
+        // Received reviews as client (partner reviews about client)
+        $receivedAsClient = Review::where('reviewee_id', $id)
+            ->where('type', 'forClient')
+            ->where('is_visible', true)
+            ->with(['reviewer', 'reviewee', 'reservation'])
+            ->get()
+            ->filter(function ($review) {
+                if (!$review->reservation) return false;
+                // Reciprocal review: client (reviewee) must have reviewed the partner (reviewer)
+                $reciprocalExists = Review::where('reservation_id', $review->reservation_id)
+                    ->where('reviewer_id', $review->reviewee_id)
+                    ->where('reviewee_id', $review->reviewer_id)
+                    ->exists();
+                $oneWeekPassed = Carbon::parse($review->reservation->end_date)->addWeek()->lt(now());
+                return $reciprocalExists || $oneWeekPassed;
+            })
+            ->sortByDesc('created_at')
+            ->values();
+
+        $givenReviews = Review::where('reviewer_id', $id)
+            ->with(['reviewer', 'reviewee'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $givenAsClient = $givenReviews->filter(fn($r) => $r->type === 'forPartner')->values();
+        $givenAsPartner = $givenReviews->filter(fn($r) => $r->type === 'forClient')->values();
+
         return response()->json([
-            'timestamp' => Carbon::now()->toIso8601String(),
-            'status' => 404,
-            'error' => 'Not Found',
-            'message' => "User with ID {$id} not found"
-        ], 404);
+            'received_reviews_as_partner' => $receivedAsPartner->map(fn($r) => $this->formatReview($r)),
+            'received_reviews_as_client' => $receivedAsClient->map(fn($r) => $this->formatReview($r)),
+            'given_reviews_as_client' => $givenAsClient->map(fn($r) => $this->formatReview($r)),
+            'given_reviews_as_partner' => $givenAsPartner->map(fn($r) => $this->formatReview($r)),
+        ]);
     }
 
-    // === RECEIVED REVIEWS ===
-
-    // Reçues en tant que partenaire (forPartner uniquement)
-    $receivedAsPartner = Review::where('reviewee_id', $id)
-        ->where('type', 'forPartner')
-        ->with(['reviewer', 'reviewee', 'reservation'])
-        ->get()
-        ->filter(function ($review) {
-            $otherReviewExists = Review::where('reservation_id', $review->reservation_id)
-                ->where('reviewer_id', $review->reviewee_id)
-                ->where('reviewee_id', $review->reviewer_id)
-                ->exists();
-
-            $oneWeekPassed = $review->reservation && Carbon::parse($review->reservation->end_date)->addWeek()->lt(now());
-
-            return $otherReviewExists || $oneWeekPassed;
-        })
-        ->sortByDesc('created_at')
-        ->values();
-
-    // Reçues en tant que client (forClient uniquement)
-    $receivedAsClient = Review::where('reviewee_id', $id)
-        ->where('type', 'forClient')
-        ->with(['reviewer', 'reviewee'])
-        ->orderBy('created_at', 'desc')
-        ->get();
-
-    // === GIVEN REVIEWS ===
-
-    $givenReviews = Review::where('reviewer_id', $id)
-        ->where('is_visible', true)
-        ->with(['reviewer', 'reviewee'])
-        ->orderBy('created_at', 'desc')
-        ->get();
-
-    // Séparer les données selon le type
-    $givenAsClient = $givenReviews->filter(fn($r) => $r->type === 'forPartner')->values();
-    $givenAsPartner = $givenReviews->filter(fn($r) => $r->type === 'forClient')->values();
-
-    // === FORMAT & RETURN ===
-
-    return response()->json([
-        'received_reviews_as_partner' => $receivedAsPartner->map(fn($r) => $this->formatReview($r)),
-        'received_reviews_as_client' => $receivedAsClient->map(fn($r) => $this->formatReview($r)),
-        'given_reviews_as_client' => $givenAsClient->map(fn($r) => $this->formatReview($r)),
-        'given_reviews_as_partner' => $givenAsPartner->map(fn($r) => $this->formatReview($r)),
-    ]);
-}
-
-private function formatReview(Review $review): array
+    private function formatReview(Review $review): array
     {
         return [
             'id' => $review->id,
